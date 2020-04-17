@@ -1,0 +1,8 @@
+[39mrunning build[0m
+[39mrunning config_cc[0m
+[39munifing config_cc, config, build_clib, build_ext, build commands --compiler options[0m
+[39mrunning config_fc[0m
+[39munifing config_fc, config, build_clib, build_ext, build commands --fcompiler options[0m
+[39mrunning build_src[0m
+[39mbuild_src[0m
+[39mbuilding extension "_auto_getfield(Main, Symbol("##396")){getfield(Main, Symbol("##141#145")),getfield(Main, Symbol("##142#146")),getfield(Main, Symbol("##143#147")),Nothing,Nothing,getfield(Main, Symbol("##144#148")),Expr,Expr}_vf" sources[0m
