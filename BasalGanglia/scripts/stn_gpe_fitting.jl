@@ -245,25 +245,6 @@ k_aa = 2.0
 k_ps = 2.0
 k_as = 4.0
 
-# Δ_e = 25.3
-# Δ_p = 301.2
-# Δ_a = 271.0
-#
-# η_e = -112.2
-# η_p = -653.5
-# η_a = -1662.4
-#
-# k_ee = 243.8
-# k_pe = 2365.0
-# k_ae = 200.0
-# k_ep = 275.7
-# k_pp = 276.0
-# k_ap = 2330.3
-# k_pa = 1684.7
-# k_aa = 532.3
-# k_ps = 2702.6
-# k_as = 2679.5
-
 p = [η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
 
 # firing rate targets
@@ -288,7 +269,7 @@ function stn_gpe_loss(p)
     if minimum(p[4:end]) < 0.0
         return 1e8
     else
-        sol = Array(concrete_solve(stn_gpe_prob,Tsit5(),u0,p,saveat=0.1,sensealg=InterpolatingAdjoint(),reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dtmax=1e-2,dt=1e-5)) .* 1e3
+        sol = Array(concrete_solve(stn_gpe_prob,BS5(),u0,p,saveat=0.1,sensealg=InterpolatingAdjoint(),reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dt=1e-5,adaptive=true)) .* 1e3
         if size(sol)[2] < (tspan[2]-1)/0.1
             return 1e8
 		elseif maximum(maximum(abs.(sol[target_vars, :]))) > 1000.0
@@ -305,14 +286,14 @@ end
 cb = function (p,l) #callback function to observe training
   display(l)
   # using `remake` to re-create our `prob` with current parameters `p`
-  display(plot(solve(remake(stn_gpe_prob,p=p),Tsit5(),saveat=0.05,reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dtmax=1e-2,dt=1e-5,progress=true)[target_vars, :]', ylims=[0.0, 0.2]))
+  display(plot(solve(remake(stn_gpe_prob,p=p),BS5(),saveat=0.1,reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dt=1e-5,adaptive=true)[target_vars, :]', ylims=[0.0, 0.2]))
   return false # Tell it to not halt the optimization. If return true, then optimization stops
 end
 
 # Display the ODE with the initial parameter values.
 cb(p,stn_gpe_loss(p))
 
-res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAM(0.1,(0.9,0.9)),cb = cb, maxiters=1000)
+res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.05),cb = cb, maxiters=1000)
 p_new = res.minimizer
 display(p_new)
 η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
