@@ -1,4 +1,4 @@
-using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim, Statistics
+using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim, Statistics, JLD2, FileIO
 
 
 # definition of the motion equations
@@ -11,8 +11,7 @@ function stn_gpe(du, u, p, t)
     # extract state vars and params
     r_e1, v_e1, r_p1, v_p1, r_a1, v_a1, r_e2, v_e2, r_p2, v_p2, r_a2, v_a2,
     r_e3, v_e3, r_p3, v_p3, r_a3, v_a3, r_e4, v_e4, r_p4, v_p4, r_a4, v_a4,
-    r_e5, v_e5, r_p5, v_p5, r_a5, v_a5, r_e6, v_e6, r_p6, v_p6, r_a6, v_a6,
-    r_e7, v_e7, r_p7, v_p7, r_a7, v_a7 = u
+    r_e5, v_e5, r_p5, v_p5, r_a5, v_a5 = u
     η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
 
     # condition 1
@@ -80,50 +79,21 @@ function stn_gpe(du, u, p, t)
 
     # STN
     du[25] = (Δ_e/(π*τ_e) + 2.0*r_e5*v_e5) / τ_e
-    du[26] = (v_e5^2 + η_e + (k_ee*r_e5 - k_ep*r_p5)*τ_e - (τ_e*π*r_e5)^2) / τ_e
+    du[26] = (v_e5^2 + η_e + (k_ee*r_e5 - 0.2*k_ep*r_p5)*τ_e - (τ_e*π*r_e5)^2) / τ_e
 
     # GPe-p
     du[27] = (Δ_p/(π*τ_p) + 2.0*r_p5*v_p5) / τ_p
-    du[28] = (v_p5^2 + η_p + (k_pp*r_p5 - k_pa*r_a5 - k_ps*0.002)*τ_p - (τ_p*π*r_p5)^2) / τ_e
+    du[28] = (v_p5^2 + η_p + (k_pe*r_e5 - k_pp*r_p5 - k_pa*r_a5 - k_ps*0.002)*τ_p - (τ_p*π*r_p5)^2) / τ_e
 
     # GPe-a
     du[29] = (Δ_a/(π*τ_a) + 2.0*r_a5*v_a5) / τ_a
-    du[30] = (v_a5^2 + η_a + (k_ap*r_p5 - k_aa*r_a5 - k_as*0.002)*τ_a - (τ_a*π*r_a5)^2) / τ_a
-
-    # condition 6
-    #############
-
-    # STN
-    du[31] = (Δ_e/(π*τ_e) + 2.0*r_e6*v_e6) / τ_e
-    du[32] = (v_e6^2 + η_e + (k_ee*r_e6 - k_ep*r_p6)*τ_e - (τ_e*π*r_e6)^2) / τ_e
-
-    # GPe-p
-    du[33] = (Δ_p/(π*τ_p) + 2.0*r_p6*v_p6) / τ_p
-    du[34] = (v_p6^2 + η_p + 0.2*(k_pp*r_p6 - k_pa*r_a6 - k_ps*0.002)*τ_p - (τ_p*π*r_p6)^2) / τ_e
-
-    # GPe-a
-    du[35] = (Δ_a/(π*τ_a) + 2.0*r_a6*v_a6) / τ_a
-    du[36] = (v_a6^2 + η_a + 0.2*(k_ap*r_p6 - k_aa*r_a6 - k_as*0.002)*τ_a - (τ_a*π*r_a6)^2) / τ_a
-
-    # condition 7
-    #############
-
-    # STN
-    du[37] = (Δ_e/(π*τ_e) + 2.0*r_e7*v_e7) / τ_e
-    du[38] = (v_e7^2 + η_e + (k_ee*r_e7 - 0.2*k_ep*r_p7)*τ_e - (τ_e*π*r_e7)^2) / τ_e
-
-    # GPe-p
-    du[39] = (Δ_p/(π*τ_p) + 2.0*r_p7*v_p7) / τ_p
-    du[40] = (v_p7^2 + η_p + (k_pe*r_e7 - k_pp*r_p7 - k_pa*r_a7 - k_ps*0.002)*τ_p - (τ_p*π*r_p7)^2) / τ_e
-
-    # GPe-a
-    du[41] = (Δ_a/(π*τ_a) + 2.0*r_a7*v_a7) / τ_a
-    du[42] = (v_a7^2 + η_a + (k_ae*r_e7 - k_ap*r_p7 - k_aa*r_a7 - k_as*0.002)*τ_a - (τ_a*π*r_a7)^2) / τ_a
+    du[30] = (v_a5^2 + η_a + (k_ae*r_e5 - k_ap*r_p5 - k_aa*r_a5 - k_as*0.002)*τ_a - (τ_a*π*r_a5)^2) / τ_a
 
 end
 
 # initial condition and parameters
-u0 = zeros(42,)
+N = 30
+u0 = zeros(N,)
 tspan = [0., 50.]
 
 Δ_e = 0.1*τ_e^2
@@ -175,23 +145,24 @@ targets=[[20, 60, 30]  # healthy control
         ]
 # oscillation behavior targets
 freq_targets = [0.0, 0.0, missing, 0.0, missing]
-freq_indices = 3:6:
+freq_indices = 1:3:N/2
+
 # model definition
 stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
-target_vars = 1:2:42
+target_vars = 1:2:N
 
 # model simulation over conditions and calculation of loss
 function stn_gpe_loss(p)
 
     # run simulations and calculate loss
     sol = Array(concrete_solve(stn_gpe_prob,Tsit5(),u0,p,saveat=0.1,abstol=1e-6,
-        reltol=1e-6, sensealg=BacksolveAdjoint())[target_vars, :]) .* 1e3
+        reltol=1e-6, sensealg=QuadratureAdjoint())[target_vars, :]) .* 1e3
     diff1 = sum(abs2, s-t for (s,t) in zip(sol[:, end], targets) if ! ismissing(t))
-    diff2 = sum(ismissing(t) ? 1/var(s))
+    #diff2 = sum(abs2, ismissing(t) ? 1/var(sol[i, 20:end]) : var(sol[i, 20:end]) for (i, t) in zip(freq_indices, freq_targets))
     max_rate = maximum(maximum(sol))
     max_rate > 1000.0 ? diff3 = abs2(max_rate) : diff3 = 0.0
     minimum(p[4:end]) < 0.0 ? diff4 = 1e6 : diff4 = 0.0
-    return diff1 + diff2 + diff3
+    return diff1 + diff3 + diff4
 end
 
 # model optimization
@@ -206,7 +177,8 @@ end
 cb(p,stn_gpe_loss(p))
 
 res = DiffEqFlux.sciml_train(stn_gpe_loss, p, ADAGrad(0.1), cb = cb,
-                             maxiters=5000)
+                             maxiters=5)
 p_new = res.minimizer
 display(p_new)
 η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
+@save "BasalGanglia/results/stn_gpe_params.jld" p_new
