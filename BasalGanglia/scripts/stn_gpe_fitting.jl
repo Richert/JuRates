@@ -289,7 +289,7 @@ end
 cb = function (p,l) #callback function to observe training
   display(l)
   # using `remake` to re-create our `prob` with current parameters `p`
-  display(plot(solve(remake(stn_gpe_prob,p=p),BS5(),saveat=0.1,reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dt=1e-5,adaptive=true)[target_vars, :]', ylims=[0.0, 0.2]))
+  #display(plot(solve(remake(stn_gpe_prob,p=p),BS5(),saveat=0.1,reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dt=1e-5,adaptive=true)[target_vars, :]', ylims=[0.0, 0.2]))
   return false # Tell it to not halt the optimization. If return true, then optimization stops
 end
 
@@ -303,4 +303,4 @@ display(p_new)
 
 jname = ARGS[1]
 jid = ARGS[2]
-@save "../results/$jname" * "_$jid" * "_params.jdl" p_new
+@save "../BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p_new
