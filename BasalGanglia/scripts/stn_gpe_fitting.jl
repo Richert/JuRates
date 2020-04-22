@@ -227,12 +227,12 @@ u0 = zeros(N,)
 tspan = [0., 50.]
 
 rng = MersenneTwister(1234)
-Δ_e = rand(rng, truncated(Normal(0.25,0.1),0,0.5))
-Δ_p = rand(rng, truncated(Normal(0.6,0.2),0,1.1))
-Δ_a = rand(rng, truncated(Normal(0.6,0.2),0,1.1))
+Δ_e = rand(rng, truncated(Normal(0.1,0.05),0,0.5))
+Δ_p = rand(rng, truncated(Normal(0.6,0.1),0,1.1))
+Δ_a = rand(rng, truncated(Normal(0.6,0.1),0,1.1))
 
-η_e = rand(rng, truncated(Normal(-0.1,0.1),-1.0,1.0))
-η_p = rand(rng, truncated(Normal(-0.4,0.2),-1.0,1.0))
+η_e = rand(rng, truncated(Normal(-0.1,0.05),-1.0,0.01))
+η_p = rand(rng, truncated(Normal(-0.4,0.1),-1.0,0.0))
 η_a = rand(rng, truncated(Normal(-0.8,0.2),-2.0,0.0))
 
 k_ee = rand(rng, truncated(Normal(0.1,0.1),0,0.6))
@@ -296,7 +296,7 @@ end
 # Display the ODE with the initial parameter values.
 cb(p,stn_gpe_loss(p))
 
-res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.02),cb = cb, maxiters=5000)
+res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.02),cb = cb, maxiters=1000)
 p_new = res.minimizer
 display(p_new)
 η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
