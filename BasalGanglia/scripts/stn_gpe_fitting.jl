@@ -303,4 +303,4 @@ display(p_new)
 
 jname = ARGS[1]
 jid = ARGS[2]
-@save "BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p_new
+@save "../results/$jname" * "_$jid" * "_params.jdl" p_new
