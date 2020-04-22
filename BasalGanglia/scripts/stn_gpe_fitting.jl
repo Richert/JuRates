@@ -224,7 +224,7 @@ end
 N = 430
 N1 = 30
 u0 = zeros(N,)
-tspan = [0., 20.]
+tspan = [0., 50.]
 
 rng = MersenneTwister(1234)
 Δ_e = rand(rng, truncated(Normal(0.25,0.1),0,0.5))
