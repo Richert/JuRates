@@ -1,4 +1,4 @@
-using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim, Statistics, JLD2, FileIO
+using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim, Statistics, JLD2, FileIO, Random, Distributions
 
 
 # definition of the motion equations
@@ -224,28 +224,31 @@ end
 N = 430
 N1 = 30
 u0 = zeros(N,)
-tspan = [0., 50.]
+tspan = [0., 20.]
 
-Δ_e = 0.1
-Δ_p = 0.7
-Δ_a = 0.8
+rng = MersenneTwister(1234)
+Δ_e = rand(rng, truncated(Normal(0.25,0.1),0,0.5))
+Δ_p = rand(rng, truncated(Normal(0.6,0.2),0,1.1))
+Δ_a = rand(rng, truncated(Normal(0.6,0.2),0,1.1))
 
-η_e = -0.1
-η_p = -0.4
-η_a = -0.8
+η_e = rand(rng, truncated(Normal(-0.1,0.1),-1.0,1.0))
+η_p = rand(rng, truncated(Normal(-0.4,0.2),-1.0,1.0))
+η_a = rand(rng, truncated(Normal(-0.8,0.2),-2.0,0.0))
 
-k_ee = 0.1
-k_pe = 1.0
-k_ae = 1.5
-k_ep = 2.0
-k_pp = 0.4
-k_ap = 1.0
-k_pa = 2.0
-k_aa = 2.0
-k_ps = 2.0
-k_as = 4.0
+k_ee = rand(rng, truncated(Normal(0.1,0.1),0,0.6))
+k_pe = rand(rng, truncated(Normal(1.0,0.4),0,6.0))
+k_ae = rand(rng, truncated(Normal(0.5,0.2),0,3.0))
+k_ep = rand(rng, truncated(Normal(1.0,0.4),0,6.0))
+k_pp = rand(rng, truncated(Normal(0.5,0.2),0,3.0))
+k_ap = rand(rng, truncated(Normal(0.5,0.2),0,4.0))
+k_pa = rand(rng, truncated(Normal(0.5,0.2),0,4.0))
+k_aa = rand(rng, truncated(Normal(0.5,0.2),0,4.0))
+k_ps = rand(rng, truncated(Normal(2.0,0.5),0,8.0))
+k_as = rand(rng, truncated(Normal(3.0,0.5),0,8.0))
 
 p = [η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
+
+#@load "BasalGanglia/results/stn_gpe_params.jld" p
 
 # firing rate targets
 targets=[[20, 60, 30]  # healthy control
@@ -273,7 +276,7 @@ function stn_gpe_loss(p)
         if size(sol)[2] < (tspan[2]-1)/0.1
             return 1e8
 		elseif maximum(maximum(abs.(sol[target_vars, :]))) > 1000.0
-			return 1e8
+			return maximum(maximum(abs.(sol[target_vars, :])))^2
         else
             diff1 = sum(abs2, s-t for (s,t) in zip(mean(sol[target_vars, :],dims=2), targets) if ! ismissing(t))
             diff2 = sum(ismissing(t) ? 1/var(sol[i, 20:200]) : var(sol[i, 50:end]) for (i, t) in zip(freq_indices, freq_targets))
@@ -293,8 +296,11 @@ end
 # Display the ODE with the initial parameter values.
 cb(p,stn_gpe_loss(p))
 
-res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.05),cb = cb, maxiters=1000)
+res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.02),cb = cb, maxiters=3)
 p_new = res.minimizer
 display(p_new)
 η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
-@save "BasalGanglia/results/stn_gpe_params.jld" p_new
+
+jname = ARGS[1]
+jid = ARGS[2]
+@save "BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p_new
