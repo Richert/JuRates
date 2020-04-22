@@ -1,4 +1,5 @@
-using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim
+using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim, Statistics
+
 
 # definition of the motion equations
 τ_e = 13.0
@@ -170,11 +171,11 @@ targets=[[20, 60, 30]  # healthy control
          [missing, 30, missing]  # ampa blockade in GPe
          [missing, 70, missing]  # ampa and gabaa blockade in GPe
          [missing, 100, missing]  # GABAA blockade in GPe
-         [missing, 20, missing]  # STN blockade
-         [missing, 60, missing]  # STN blockade + gabaa blockade in GPe
          [40, 100, missing]  # GABAA blockade in STN
         ]
-
+# oscillation behavior targets
+freq_targets = [0.0, 0.0, missing, 0.0, missing]
+freq_indices = 3:6:
 # model definition
 stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
 target_vars = 1:2:42
@@ -184,11 +185,12 @@ function stn_gpe_loss(p)
 
     # run simulations and calculate loss
     sol = Array(concrete_solve(stn_gpe_prob,Tsit5(),u0,p,saveat=0.1,abstol=1e-6,
-                         reltol=1e-6)[target_vars, :]) .* 1e3
+        reltol=1e-6, sensealg=BacksolveAdjoint())[target_vars, :]) .* 1e3
     diff1 = sum(abs2, s-t for (s,t) in zip(sol[:, end], targets) if ! ismissing(t))
+    diff2 = sum(ismissing(t) ? 1/var(s))
     max_rate = maximum(maximum(sol))
-    max_rate > 1000.0 ? diff2 = abs2(max_rate) : diff2 = 0.0
-    minimum(p[4:end]) < 0.0 ? diff3 = 1e6 : diff3 = 0.0
+    max_rate > 1000.0 ? diff3 = abs2(max_rate) : diff3 = 0.0
+    minimum(p[4:end]) < 0.0 ? diff4 = 1e6 : diff4 = 0.0
     return diff1 + diff2 + diff3
 end
 
@@ -203,7 +205,7 @@ end
 # Display the ODE with the initial parameter values.
 cb(p,stn_gpe_loss(p))
 
-res = DiffEqFlux.sciml_train(stn_gpe_loss, p, ADADelta(), cb = cb,
+res = DiffEqFlux.sciml_train(stn_gpe_loss, p, ADAGrad(0.1), cb = cb,
                              maxiters=5000)
 p_new = res.minimizer
 display(p_new)
