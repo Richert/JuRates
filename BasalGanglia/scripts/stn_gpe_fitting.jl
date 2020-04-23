@@ -1,5 +1,4 @@
-using Flux, DiffEqFlux, DifferentialEquations, Plots, DiffEqSensitivity, Optim, Statistics, JLD2, FileIO, Random, Distributions
-
+using Zygote, PDMats, Distributions, Random, Statistics, FileIO, JLD2, Flux, DifferentialEquations, DiffEqSensitivity, DiffEqFlux
 
 # definition of the motion equations
 τ_e = 13.0
