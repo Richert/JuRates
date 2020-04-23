@@ -1,4 +1,4 @@
-using Zygote, PDMats, Distributions, Random, Statistics, FileIO, JLD2, Flux, DifferentialEquations, DiffEqSensitivity, DiffEqFlux
+using Zygote, PDMats, CUDAnative, CuArrays, Distributions, Random, Statistics, FileIO, JLD2, Flux, DifferentialEquations, DiffEqSensitivity, DiffEqFlux, Plots
 
 # definition of the motion equations
 τ_e = 13.0
@@ -295,7 +295,7 @@ end
 # Display the ODE with the initial parameter values.
 cb(p,stn_gpe_loss(p))
 
-res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.02),cb = cb, maxiters=1000)
+res = DiffEqFlux.sciml_train(stn_gpe_loss,p,ADAGrad(0.02),cb = cb, maxiters=500)
 p_new = res.minimizer
 display(p_new)
 η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
