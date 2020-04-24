@@ -1,13 +1,9 @@
-using Distributions, Random, Statistics, FileIO, JLD2, Flux, Optim, DifferentialEquations, DiffEqSensitivity, DiffEqFlux, Plots
+using Distributions, Random, Statistics, FileIO, JLD2, Optim, DifferentialEquations, DiffEqSensitivity, Plots
 
 # definition of the motion equations
 τ_e = 13.0
 τ_p = 25.0
 τ_a = 20.0
-
-Δ_e = 0.05*τ_e^2
-Δ_p = 0.6*τ_p^2
-Δ_a = 0.3*τ_a^2
 
 function stn_gpe(du, u, p, t)
 
@@ -18,8 +14,8 @@ function stn_gpe(du, u, p, t)
 	r_ep1, r_ep2, r_ep3, r_ep4, r_ep5 = u[186:190]
 	r_xp1, r_xp2, r_xp3, r_xp4, r_xp5 = u[206:210]
 	r_xa1, r_xa2, r_xa3, r_xa4, r_xa5 = u[226:230]
-	r_ee1, r_ee2, r_ee3, r_ee4, r_ee5 = u[46:50]
-    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
+	r_ee1, r_ee2, r_ee3, r_ee4, r_ee5 = u[246:250]
+    η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
 
 	# set/adjust parameters
 	#######################
@@ -28,10 +24,15 @@ function stn_gpe(du, u, p, t)
 	r_p = [r_p1, r_p2, r_p3, r_p4, r_p5]
 	r_a = [r_a1, r_a2, r_a3, r_a4, r_a5]
 
-	k_e_d = 4
+	k_pe_d = 4
 	k_ep_d = 5
-	k_p_d = 4
-	k_a_d = 4
+	k_p_d = 10
+	k_a_d = 10
+	k_ee_d = 10
+
+	Δ_e = Δ_e*τ_e^2
+	Δ_p = Δ_p*τ_p^2
+	Δ_a = Δ_a*τ_a^2
 
 	η_e = η_e*Δ_e*10.0
 	η_p = η_p*Δ_p*10.0
@@ -127,22 +128,22 @@ function stn_gpe(du, u, p, t)
     ####################
 
     # STN to GPe-p
-	du[31:35] .= k_e_d .* (r_e .- u[31:35])
-	du[36:40] .= k_e_d .* (u[31:35] .- u[36:40])
-	du[41:45] .= k_e_d .* (u[36:40] .- u[41:45])
-	du[46:50] .= k_e_d .* (u[41:45] .- u[46:50])
-	du[51:55] .= k_e_d .* (u[46:50] .- u[51:55])
-	du[56:60] .= k_e_d .* (u[51:55] .- u[56:60])
-	du[61:65] .= k_e_d .* (u[56:60] .- u[61:65])
-	du[66:70] .= k_e_d .* (u[61:65] .- u[66:70])
-	du[71:75] .= k_e_d .* (u[66:70] .- u[71:75])
-	du[76:80] .= k_e_d .* (u[71:75] .- u[76:80])
-	du[81:85] .= k_e_d .* (u[76:80] .- u[81:85])
-	du[86:90] .= k_e_d .* (u[81:85] .- u[86:90])
-	du[91:95] .= k_e_d .* (u[86:90] .- u[91:95])
-	du[96:100] .= k_e_d .* (u[91:95] .- u[96:100])
-	du[101:105] .= k_e_d .* (u[96:100] .- u[101:105])
-	du[106:110] .= k_e_d .* (u[101:105] .- u[106:110])
+	du[31:35] .= k_pe_d .* (r_e .- u[31:35])
+	du[36:40] .= k_pe_d .* (u[31:35] .- u[36:40])
+	du[41:45] .= k_pe_d .* (u[36:40] .- u[41:45])
+	du[46:50] .= k_pe_d .* (u[41:45] .- u[46:50])
+	du[51:55] .= k_pe_d .* (u[46:50] .- u[51:55])
+	du[56:60] .= k_pe_d .* (u[51:55] .- u[56:60])
+	du[61:65] .= k_pe_d .* (u[56:60] .- u[61:65])
+	du[66:70] .= k_pe_d .* (u[61:65] .- u[66:70])
+	du[71:75] .= k_pe_d .* (u[66:70] .- u[71:75])
+	du[76:80] .= k_pe_d .* (u[71:75] .- u[76:80])
+	du[81:85] .= k_pe_d .* (u[76:80] .- u[81:85])
+	du[86:90] .= k_pe_d .* (u[81:85] .- u[86:90])
+	du[91:95] .= k_pe_d .* (u[86:90] .- u[91:95])
+	du[96:100] .= k_pe_d .* (u[91:95] .- u[96:100])
+	du[101:105] .= k_pe_d .* (u[96:100] .- u[101:105])
+	du[106:110] .= k_pe_d .* (u[101:105] .- u[106:110])
 
 	# GPe-p to STN
 	du[111:115] .= k_ep_d .* (r_p - u[111:115])
@@ -174,41 +175,49 @@ function stn_gpe(du, u, p, t)
 	du[221:225] .= k_a_d .* (u[216:220] .- u[221:225])
 	du[226:230] .= k_a_d .* (u[221:225] .- u[226:230])
 
+    # ! STN to STN
+	du[231:235] .= k_ee_d * (r_e .- u[231:235])
+	du[236:240] .= k_ee_d .* (u[231:235] .- u[236:240])
+	du[241:245] .= k_ee_d .* (u[236:240] .- u[241:245])
+	du[246:250] .= k_ee_d .* (u[241:245] .- u[246:250])
+
 end
 
 # initial condition and parameters
-N = 230
+N = 250
 N1 = 30
 u0 = zeros(N,)
 tspan = [0., 50.]
 
 #rng = MersenneTwister(1234)
-#Δ_e = rand(truncated(Normal(0.05,0.01),0.02,0.08))
-#Δ_p = rand(truncated(Normal(0.6,0.1),0.3,0.9))
-#Δ_a = rand(truncated(Normal(0.3,0.1),0.1,0.5))
+Δ_e = rand(rng, truncated(Normal(0.05,0.01),0.02,0.08))
+Δ_p = rand(rng, truncated(Normal(0.6,0.1),0.3,0.9))
+Δ_a = rand(rng, truncated(Normal(0.3,0.1),0.1,0.5))
 
-η_e = rand(truncated(Normal(-0.1,0.05),-1.0,0.5))
-η_p = rand(truncated(Normal(-0.4,0.1),-1.0,0.5))
-η_a = rand(truncated(Normal(-0.8,0.2),-2.0,0.0))
+η_e = rand(rng, truncated(Normal(-0.1,0.05),-1.0,0.5))
+η_p = rand(rng, truncated(Normal(-0.4,0.1),-1.0,0.5))
+η_a = rand(rng, truncated(Normal(-0.8,0.2),-2.0,0.0))
 
-k_ee = rand(truncated(Normal(0.02,0.01),0,0.06))
-k_pe = rand(truncated(Normal(2.0,0.1),0.2,4.0))
-k_ae = rand(truncated(Normal(0.4,0.05),0.1,2.0))
-k_ep = rand(truncated(Normal(0.3,0.05),0.1,0.6))
-k_pp = rand(truncated(Normal(0.07,0.01),0.05,0.09))
-k_ap = rand(truncated(Normal(0.2,0.05),0.05,0.8))
-k_pa = rand(truncated(Normal(0.2,0.05),0.05,0.8))
-k_aa = rand(truncated(Normal(0.05,0.01),0.02,0.08))
-k_ps = rand(truncated(Normal(1.0,0.1), 0.4,4.0))
-k_as = rand(truncated(Normal(1.0,0.1), 0.4,4.0))
+k_ee = rand(rng, truncated(Normal(0.02,0.01),0,0.06))
+k_pe = rand(rng, truncated(Normal(2.0,0.1),0.2,4.0))
+k_ae = rand(rng, truncated(Normal(0.4,0.05),0.1,2.0))
+k_ep = rand(rng, truncated(Normal(0.3,0.05),0.1,0.6))
+k_pp = rand(rng, truncated(Normal(0.07,0.01),0.05,0.09))
+k_ap = rand(rng, truncated(Normal(0.2,0.05),0.05,0.8))
+k_pa = rand(rng, truncated(Normal(0.2,0.05),0.05,0.8))
+k_aa = rand(rng, truncated(Normal(0.05,0.01),0.02,0.08))
+k_ps = rand(rng, truncated(Normal(1.0,0.1), 0.4,4.0))
+k_as = rand(rng, truncated(Normal(1.0,0.1), 0.4,4.0))
 
-#Δ_e = Δ_e*τ_e^2
-#Δ_p = Δ_p*τ_p^2
-#Δ_a = Δ_a*τ_a^2
-
-p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
-
+# initial parameters
+p = [η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
+
+# lower bounds
+p_lower = [-1, -1, -2, 1e-3, 1e-3, 1e-3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+# upper bounds
+p_upper = [1, 1, 0, 0.1, 0.9, 0.8, 0.1, 4, 2, 4, 0.1, 2, 2, 0.1, 8, 8]
 
 # firing rate targets
 targets=[[20, 60, 30]  # healthy control
@@ -229,15 +238,14 @@ target_vars = 1:2:N1
 function stn_gpe_loss(p)
 
     # run simulation
-    sol = Array(concrete_solve(stn_gpe_prob, DP5(), u0, p, sensealg=QuadratureAdjoint(), saveat=0.1, reltol=1e-4, abstol=1e-6, maxiters=tspan[2]/1e-6, dt=1e-5, adaptive=true)) .* 1e3
+    sol = Array(concrete_solve(stn_gpe_prob,DP5(),u0,p,saveat=0.1,sensealg=InterpolatingAdjoint(),reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dt=1e-5,adaptive=true)) .* 1e3
 
 	# calculate loss
 	diff1 = sum((s-t)^2/t for (s,t) in zip(mean(sol[target_vars, 400:end],dims=2), targets) if ! ismissing(t))
-    diff2 = sum(ismissing(t) ? 1/var(sol[i, 50:end]) : var(sol[i, 50:end]) for (i, t) in zip(freq_indices, freq_targets))
+    diff2 = sum(ismissing(t) ? 1/var(sol[i, 50:400]) : var(sol[i, 50:end]) for (i, t) in zip(freq_indices, freq_targets))
 	r_max = maximum(maximum(abs.(sol[target_vars, 200:end])))
 	r_max^2 > 1000.0 ? diff3 = r_max^2 : diff3 = 0.0
-	any(p[4:end] .< 0.0) ? diff4 = 1e6 : diff4 = 0.0
-    return diff1 + diff2 + diff3 + diff4
+    return diff1 + diff2 + diff3
 
 end
 
@@ -246,7 +254,7 @@ cb = function (p,l) #callback function to observe training
   display(l)
   # using `remake` to re-create our `prob` with current parameters `p`
   if all(p[4:end] .> 0.0)
-	  display(plot(solve(remake(stn_gpe_prob,p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6, maxiters=tspan[2]/1e-6, dt=1e-5, adaptive=true)[target_vars, :]', ylims=[0.0, 0.2]))
+	  display(plot(solve(remake(stn_gpe_prob,p=p),DP5(),saveat=0.1,reltol=1e-4,abstol=1e-6,maxiters=tspan[2]/1e-6,dt=1e-5,adaptive=true)[target_vars, :]', ylims=[0.0, 0.2]))
   end
   return false # Tell it to not halt the optimization. If return true, then optimization stops
 end
@@ -255,15 +263,15 @@ end
 cb(p,stn_gpe_loss(p))
 
 # choose optimization algorithm
-opt = ADAGrad(0.0001)
+opt = LBFGS()
 
 # start optimization
-res = DiffEqFlux.sciml_train(stn_gpe_loss, p, opt, cb=cb, maxiters=1000)
+res = optimize(stn_gpe_loss,p_lower,p_upper,p,Fminbox(NelderMead()), Optim.Options(g_tol=1e-12, allow_f_increases=true, iterations=3, store_trace=false, show_trace=true))
 
 # receive optimization results
 p_new = res.minimizer
 display(p_new)
-η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
+η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
 
 # store best parameter set
 jname = "test" #ARGS[1]
