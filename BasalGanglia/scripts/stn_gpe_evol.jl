@@ -128,10 +128,10 @@ p0 = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
 
 # lower bounds
-p_lower = [-10*Δ_e, -10*Δ_p, -20*Δ_a, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+p_lower = [-10*Δ_e, -10*Δ_p, -20*Δ_a, 0.0, 10.0, 10.0, 10.0, 4.0, 10.0, 10.0, 3.0, 20.0, 20.0]
 
 # upper bounds
-p_upper = [10*Δ_e, 10*Δ_p, 20*Δ_a, 10*√Δ_e, 400*√Δ_p, 200*√Δ_a, 400*√Δ_e, 20*√Δ_p, 100*√Δ_a, 100*√Δ_p, 20*√Δ_a, 200*√Δ_p, 400*√Δ_a]
+p_upper = [10*Δ_e, 10*Δ_p, 0.0, 8*√Δ_e, 400*√Δ_p, 200*√Δ_a, 400*√Δ_e, 10*√Δ_p, 100*√Δ_a, 100*√Δ_p, 70*√Δ_a, 400*√Δ_p, 600*√Δ_a]
 
 # firing rate targets
 targets=[[20, 60, 30],  # healthy control
@@ -202,17 +202,17 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=10000, workers=workers(), TargetFitness=1.0, PopulationSize=5000)
+opt = bbsetup(stn_gpe_loss; Method=method, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=100000, workers=workers(), TargetFitness=1.0, PopulationSize=4000)
 #, CallbackFunction = cb, CallbackInterval=0.0)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
 # receive optimization results
-p_new = best_candidate(res)
-display(p_new)
-η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
+p = best_candidate(res)
+display(p)
+η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
 
 # store best parameter set
 jname = ARGS[1]
 jid = ARGS[2]
-@save "results/$jname" * "_$jid" * "_params.jdl" p_new
+@save "results/$jname" * "_$jid" * "_params.jdl" p

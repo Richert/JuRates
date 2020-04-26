@@ -13,7 +13,7 @@ function stn_gpe(du, u, p, t)
 
     # extract state vars and params
 	###############################
-    r_e1, v_e1, r_p1, v_p1, r_a1, v_a1, r_e2, v_e2, r_p2, v_p2, r_a2, v_a2,    r_e3, v_e3, r_p3, v_p3, r_a3, v_a3, r_e4, v_e4, r_p4, v_p4, r_a4, v_a4,    r_e5, v_e5, r_p5, v_p5, r_a5, v_a5 = u[1:30]
+    r_e1, v_e1, r_p1, v_p1, r_a1, v_a1, r_e2, v_e2, r_p2, v_p2, r_a2, v_a2, r_e3, v_e3, r_p3, v_p3, r_a3, v_a3, r_e4, v_e4, r_p4, v_p4, r_a4, v_a4, r_e5, v_e5, r_p5, v_p5, r_a5, v_a5 = u[1:30]
 	r_pe1, r_pe2, r_pe3, r_pe4, r_pe5 = u[106:110]
 	r_ep1, r_ep2, r_ep3, r_ep4, r_ep5 = u[186:190]
 	r_xp1, r_xp2, r_xp3, r_xp4, r_xp5 = u[206:210]
@@ -33,20 +33,20 @@ function stn_gpe(du, u, p, t)
 	k_p_d = 4
 	k_a_d = 4
 
-	η_e = η_e*Δ_e*10.0
-	η_p = η_p*Δ_p*10.0
-	η_a = η_a*Δ_a*10.0
-
-	k_ee = k_ee*√Δ_e*100.0
-	k_pe = k_pe*√Δ_p*100.0
-	k_ae = k_ae*√Δ_a*100.0
-	k_pp = k_pp*√Δ_p*100.0
-	k_ep = k_ep*√Δ_e*100.0
-	k_ap = k_ap*√Δ_a*100.0
-	k_pa = k_pa*√Δ_p*100.0
-	k_aa = k_aa*√Δ_a*100.0
-	k_ps = k_ps*√Δ_p*100.0
-	k_as = k_as*√Δ_a*100.0
+	# η_e = η_e*Δ_e*10.0
+	# η_p = η_p*Δ_p*10.0
+	# η_a = η_a*Δ_a*10.0
+	#
+	# k_ee = k_ee*√Δ_e*100.0
+	# k_pe = k_pe*√Δ_p*100.0
+	# k_ae = k_ae*√Δ_a*100.0
+	# k_pp = k_pp*√Δ_p*100.0
+	# k_ep = k_ep*√Δ_e*100.0
+	# k_ap = k_ap*√Δ_a*100.0
+	# k_pa = k_pa*√Δ_p*100.0
+	# k_aa = k_aa*√Δ_a*100.0
+	# k_ps = k_ps*√Δ_p*100.0
+	# k_as = k_as*√Δ_a*100.0
 
     # condition 1
     #############
@@ -187,28 +187,30 @@ tspan = [0., 50.]
 #Δ_p = rand(truncated(Normal(0.6,0.1),0.3,0.9))
 #Δ_a = rand(truncated(Normal(0.3,0.1),0.1,0.5))
 
-η_e = rand(truncated(Normal(-0.1,0.05),-1.0,0.5))
-η_p = rand(truncated(Normal(-0.4,0.1),-1.0,0.5))
-η_a = rand(truncated(Normal(-0.8,0.2),-2.0,0.0))
-
-k_ee = rand(truncated(Normal(0.02,0.01),0,0.06))
-k_pe = rand(truncated(Normal(2.0,0.1),0.2,4.0))
-k_ae = rand(truncated(Normal(0.4,0.05),0.1,2.0))
-k_ep = rand(truncated(Normal(0.3,0.05),0.1,0.6))
-k_pp = rand(truncated(Normal(0.07,0.01),0.05,0.09))
-k_ap = rand(truncated(Normal(0.2,0.05),0.05,0.8))
-k_pa = rand(truncated(Normal(0.2,0.05),0.05,0.8))
-k_aa = rand(truncated(Normal(0.05,0.01),0.02,0.08))
-k_ps = rand(truncated(Normal(1.0,0.1), 0.4,4.0))
-k_as = rand(truncated(Normal(1.0,0.1), 0.4,4.0))
+# η_e = rand(truncated(Normal(-0.1,0.05),-1.0,0.5))
+# η_p = rand(truncated(Normal(-0.4,0.1),-1.0,0.5))
+# η_a = rand(truncated(Normal(-0.8,0.2),-2.0,0.0))
+#
+# k_ee = rand(truncated(Normal(0.02,0.01),0,0.06))
+# k_pe = rand(truncated(Normal(2.0,0.1),0.2,4.0))
+# k_ae = rand(truncated(Normal(0.4,0.05),0.1,2.0))
+# k_ep = rand(truncated(Normal(0.3,0.05),0.1,0.6))
+# k_pp = rand(truncated(Normal(0.07,0.01),0.05,0.09))
+# k_ap = rand(truncated(Normal(0.2,0.05),0.05,0.8))
+# k_pa = rand(truncated(Normal(0.2,0.05),0.05,0.8))
+# k_aa = rand(truncated(Normal(0.05,0.01),0.02,0.08))
+# k_ps = rand(truncated(Normal(1.0,0.1), 0.4,4.0))
+# k_as = rand(truncated(Normal(1.0,0.1), 0.4,4.0))
 
 #Δ_e = Δ_e*τ_e^2
 #Δ_p = Δ_p*τ_p^2
 #Δ_a = Δ_a*τ_a^2
 
-p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
+#p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
 
-#@load "BasalGanglia/results/stn_gpe_params.jld" p
+jname = ARGS[1]
+jid = ARGS[2]
+@load "results/$jname" * "_$jid" * "_params.jdl" p
 
 # firing rate targets
 targets=[[20, 60, 30]  # healthy control
@@ -255,17 +257,15 @@ end
 cb(p,stn_gpe_loss(p))
 
 # choose optimization algorithm
-opt = ADAGrad(0.0001)
+opt = ADAGrad(0.5)
 
 # start optimization
 res = DiffEqFlux.sciml_train(stn_gpe_loss, p, opt, cb=cb, maxiters=1000)
 
 # receive optimization results
-p_new = res.minimizer
-display(p_new)
-η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p_new
+p = res.minimizer
+display(p)
+η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
 
 # store best parameter set
-jname = "test" #ARGS[1]
-jid = 0 #ARGS[2]
-@save "BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p_new
+@save "results/$jname" * "_$jid" * "_params_final.jdl" p

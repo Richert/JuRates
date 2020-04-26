@@ -5,17 +5,21 @@ using Distributions, Random, Statistics, FileIO, JLD2, Optim, DifferentialEquati
 τ_p = 25.0
 τ_a = 20.0
 
+Δ_e = 0.05*τ_e^2
+Δ_p = 0.6*τ_p^2
+Δ_a = 0.3*τ_a^2
+
 function stn_gpe(du, u, p, t)
 
     # extract state vars and params
 	###############################
-    r_e1, v_e1, r_p1, v_p1, r_a1, v_a1, r_e2, v_e2, r_p2, v_p2, r_a2, v_a2,    r_e3, v_e3, r_p3, v_p3, r_a3, v_a3, r_e4, v_e4, r_p4, v_p4, r_a4, v_a4,    r_e5, v_e5, r_p5, v_p5, r_a5, v_a5 = u[1:30]
+    r_e1, v_e1, r_p1, v_p1, r_a1, v_a1, r_e2, v_e2, r_p2, v_p2, r_a2, v_a2, r_e3, v_e3, r_p3, v_p3, r_a3, v_a3, r_e4, v_e4, r_p4, v_p4, r_a4, v_a4, r_e5, v_e5, r_p5, v_p5, r_a5, v_a5 = u[1:30]
 	r_pe1, r_pe2, r_pe3, r_pe4, r_pe5 = u[106:110]
 	r_ep1, r_ep2, r_ep3, r_ep4, r_ep5 = u[186:190]
 	r_xp1, r_xp2, r_xp3, r_xp4, r_xp5 = u[206:210]
 	r_xa1, r_xa2, r_xa3, r_xa4, r_xa5 = u[226:230]
 	r_ee1, r_ee2, r_ee3, r_ee4, r_ee5 = u[246:250]
-    η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
 
 	# set/adjust parameters
 	#######################
@@ -26,28 +30,9 @@ function stn_gpe(du, u, p, t)
 
 	k_pe_d = 4
 	k_ep_d = 5
-	k_p_d = 10
-	k_a_d = 10
-	k_ee_d = 10
-
-	Δ_e = Δ_e*τ_e^2
-	Δ_p = Δ_p*τ_p^2
-	Δ_a = Δ_a*τ_a^2
-
-	η_e = η_e*Δ_e*10.0
-	η_p = η_p*Δ_p*10.0
-	η_a = η_a*Δ_a*10.0
-
-	k_ee = k_ee*√Δ_e*100.0
-	k_pe = k_pe*√Δ_p*100.0
-	k_ae = k_ae*√Δ_a*100.0
-	k_pp = k_pp*√Δ_p*100.0
-	k_ep = k_ep*√Δ_e*100.0
-	k_ap = k_ap*√Δ_a*100.0
-	k_pa = k_pa*√Δ_p*100.0
-	k_aa = k_aa*√Δ_a*100.0
-	k_ps = k_ps*√Δ_p*100.0
-	k_as = k_as*√Δ_a*100.0
+	k_p_d = 4
+	k_a_d = 4
+	k_ee_d = 4
 
     # condition 1
     #############
@@ -189,35 +174,35 @@ N1 = 30
 u0 = zeros(N,)
 tspan = [0., 50.]
 
-#rng = MersenneTwister(1234)
-Δ_e = rand(rng, truncated(Normal(0.05,0.01),0.02,0.08))
-Δ_p = rand(rng, truncated(Normal(0.6,0.1),0.3,0.9))
-Δ_a = rand(rng, truncated(Normal(0.3,0.1),0.1,0.5))
-
-η_e = rand(rng, truncated(Normal(-0.1,0.05),-1.0,0.5))
-η_p = rand(rng, truncated(Normal(-0.4,0.1),-1.0,0.5))
-η_a = rand(rng, truncated(Normal(-0.8,0.2),-2.0,0.0))
-
-k_ee = rand(rng, truncated(Normal(0.02,0.01),0,0.06))
-k_pe = rand(rng, truncated(Normal(2.0,0.1),0.2,4.0))
-k_ae = rand(rng, truncated(Normal(0.4,0.05),0.1,2.0))
-k_ep = rand(rng, truncated(Normal(0.3,0.05),0.1,0.6))
-k_pp = rand(rng, truncated(Normal(0.07,0.01),0.05,0.09))
-k_ap = rand(rng, truncated(Normal(0.2,0.05),0.05,0.8))
-k_pa = rand(rng, truncated(Normal(0.2,0.05),0.05,0.8))
-k_aa = rand(rng, truncated(Normal(0.05,0.01),0.02,0.08))
-k_ps = rand(rng, truncated(Normal(1.0,0.1), 0.4,4.0))
-k_as = rand(rng, truncated(Normal(1.0,0.1), 0.4,4.0))
+# Δ_e = rand(rng, truncated(Normal(0.05,0.01),0.02,0.08))
+# Δ_p = rand(rng, truncated(Normal(0.6,0.1),0.3,0.9))
+# Δ_a = rand(rng, truncated(Normal(0.3,0.1),0.1,0.5))
+#
+# η_e = rand(rng, truncated(Normal(-0.1,0.05),-1.0,0.5))
+# η_p = rand(rng, truncated(Normal(-0.4,0.1),-1.0,0.5))
+# η_a = rand(rng, truncated(Normal(-0.8,0.2),-2.0,0.0))
+#
+# k_ee = rand(rng, truncated(Normal(0.02,0.01),0,0.06))
+# k_pe = rand(rng, truncated(Normal(2.0,0.1),0.2,4.0))
+# k_ae = rand(rng, truncated(Normal(0.4,0.05),0.1,2.0))
+# k_ep = rand(rng, truncated(Normal(0.3,0.05),0.1,0.6))
+# k_pp = rand(rng, truncated(Normal(0.07,0.01),0.05,0.09))
+# k_ap = rand(rng, truncated(Normal(0.2,0.05),0.05,0.8))
+# k_pa = rand(rng, truncated(Normal(0.2,0.05),0.05,0.8))
+# k_aa = rand(rng, truncated(Normal(0.05,0.01),0.02,0.08))
+# k_ps = rand(rng, truncated(Normal(1.0,0.1), 0.4,4.0))
+# k_as = rand(rng, truncated(Normal(1.0,0.1), 0.4,4.0))
 
 # initial parameters
-p = [η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
-#@load "BasalGanglia/results/stn_gpe_params.jld" p
+#p = [η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
+@load "BasalGanglia/results/test_0_params.jdl" p_new
+p = p_new
 
 # lower bounds
-p_lower = [-1, -1, -2, 1e-3, 1e-3, 1e-3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+p_lower = [-1, -1, -2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 # upper bounds
-p_upper = [1, 1, 0, 0.1, 0.9, 0.8, 0.1, 4, 2, 4, 0.1, 2, 2, 0.1, 8, 8]
+p_upper = [1, 1, 0, 0.1, 4, 2, 4, 0.1, 2, 2, 0.1, 8, 8]
 
 # firing rate targets
 targets=[[20, 60, 30]  # healthy control
@@ -263,10 +248,10 @@ end
 cb(p,stn_gpe_loss(p))
 
 # choose optimization algorithm
-opt = LBFGS()
+opt = NelderMead()
 
 # start optimization
-res = optimize(stn_gpe_loss,p_lower,p_upper,p,Fminbox(NelderMead()), Optim.Options(g_tol=1e-12, allow_f_increases=true, iterations=3, store_trace=false, show_trace=true))
+res = optimize(stn_gpe_loss,p_lower,p_upper,p,Fminbox(opt), Optim.Options(g_tol=1e-12, allow_f_increases=true, iterations=3, store_trace=false, show_trace=true))
 
 # receive optimization results
 p_new = res.minimizer

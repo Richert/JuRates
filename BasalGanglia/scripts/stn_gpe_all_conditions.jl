@@ -1,12 +1,4 @@
-using DifferentialEquations,Plots,LSODA
-
-τ_e = 13.0
-τ_p = 25.0
-τ_a = 20.0
-
-Δ_e = 0.05*τ_e^2
-Δ_p = 0.6*τ_p^2
-Δ_a = 0.3*τ_a^2
+using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, Plots
 
 # definition of the motion equations
 function stn_gpe(du, u, p, t)
@@ -15,7 +7,7 @@ function stn_gpe(du, u, p, t)
 	###############################
     r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
 	r_xe, r_ep, r_xp, r_xa, r_ee = u[[22, 38, 42, 46, 50]]
-    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a, τ_e, τ_p, τ_a = p
 
 	# set/adjust parameters
 	#######################
@@ -100,33 +92,81 @@ function stn_gpe(du, u, p, t)
 
 end
 
-
 # initial condition and parameters
-u0 = zeros(50,)
-tspan = [0., 50.]
+N = 50
+u0 = zeros(N,)
+tspan = [0., 100.]
 
-η_e = -1.48*Δ_e
-η_p = -3.24*Δ_p
-η_a = -13.20*Δ_a
+#rng = MersenneTwister(1234)
+d = 1.0
+
+τ_e = 13.0
+τ_p = 25.0
+τ_a = 20.0
+
+Δ_e = 0.09*τ_e^2
+Δ_p = 0.42*τ_p^2 /d
+Δ_a = 0.24*τ_a^2 /d
+
+η_e = 0.05*Δ_e
+η_p = -1.83*Δ_p
+η_a = -1.53*Δ_a
 
 k_ee = 3.7*√Δ_e
 k_pe = 135.8*√Δ_p
 k_ae = 76.0*√Δ_a
 k_ep = 31.7*√Δ_e
 k_pp = 14.5*√Δ_p
-k_ap = 50.2*√Δ_a
+k_ap = 50.2*d*√Δ_a
 k_pa = 71.7*√Δ_p
-k_aa = 6.4*√Δ_a
+k_aa = 6.4*d*√Δ_a
 k_ps = 495.4*√Δ_p
 k_as = 584.3*√Δ_a
 
-#p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
-@load "BasalGanglia/results/test_0_params.jdl" p_new
-p = p_new
+# initial parameters
+p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a, τ_e, τ_p, τ_a]
 
-# model setup and numerical solution
-model = ODEProblem(stn_gpe, u0, tspan, p)
-solution = solve(model, DP5(), saveat=0.1)
+#@load "BasalGanglia/results/stn_gpe_opt_params_1_params.jdl" p_new
+#p = p_new + [Δ_e, Δ_p, Δ_a, τ_e, τ_p, τ_a]
+
+# firing rate targets
+targets=[[20, 60, 30],  # healthy control
+         [missing, 30, missing],  # ampa blockade in GPe
+         [missing, 70, missing],  # ampa and gabaa blockade in GPe
+         [missing, 100, missing],  # GABAA blockade in GPe
+         [40, 100, missing]  # GABAA blockade in STN
+        ]
+target_vars = [1, 3, 5]
+
+# sweep conditions
+conditions = [
+	([], []),
+	([5, 6], [0.2, 0.2]),
+	([5, 6, 8, 9, 10, 11, 12, 13], [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]),
+	([9, 10, 11, 12, 13], [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]),
+	([7], [0.2])
+]
+
+# oscillation behavior targets
+freq_targets = [0.0, 0.0, missing, 0.0, missing]
+
+# model sweep function
+function stn_gpe_conditions(prob,i,repeat)
+	indices, k_scales = conditions[i]
+	p = deepcopy(prob.p)
+	for (idx, k) in zip(indices, k_scales)
+		p[idx] *= k
+	end
+	return remake(prob, p=p)
+end
+
+# model definition
+stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
+stn_gpe_sweep = EnsembleProblem(stn_gpe_prob, prob_func=stn_gpe_conditions)
+
+# model simulation
+sol = solve(stn_gpe_sweep, DP5(), EnsembleDistributed(), trajectories=length(conditions), saveat=0.1, reltol=1e-4, abstol=1e-6, maxiters=1e8) .* 1e3
 
 # plotting
-plot(solution[[1,3,5], :]')
+cond = 1
+display(plot(sol[target_vars, :, cond]', ylims=[0.0, 300.0]))
