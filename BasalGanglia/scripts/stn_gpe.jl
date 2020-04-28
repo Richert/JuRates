@@ -118,38 +118,37 @@ function stn_gpe(du, u, p, t)
 
 end
 
-
 # initial condition and parameters
-u0 = zeros(51,)
+u0 = zeros(47,)
 tspan = [0., 250.]
 
 k = 1.0
 
-# Δ_e = 0.1
-# Δ_p = 0.15
-# Δ_a = 0.38
-#
-# η_e = 0.65
-# η_p = 0.24
-# η_a = -3.56
-#
-# k_ee = 3.8
-# k_pe = 73.4
-# k_ae = 7.4
-# k_ep = 41.8
-# k_pp = 9.6
-# k_ap = 39.7
-# k_pa = 31.7
-# k_aa = 3.2
-# k_ps = 50.3
-# k_as = 260.2
+Δ_e = 0.1
+Δ_p = 0.3
+Δ_a = 0.2
 
-#p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
-@load "BasalGanglia/results/new_fit_0_params.jdl" p
+η_e = -1.0
+η_p = -0.8
+η_a = -1.6
+
+k_ee = 6.0
+k_pe = 95.0
+k_ae = 38.0
+k_ep = 19.0
+k_pp = 8.0
+k_ap = 29.0
+k_pa = 67.0
+k_aa = 0.0
+k_ps = 45.0
+k_as = 188.0
+
+p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
+#@load "BasalGanglia/results/new_fit_0_params.jdl" p
 
 # model setup and numerical solution
 model = ODEProblem(stn_gpe, u0, tspan, p)
-solution = solve(model, DP5(), saveat=0.1)
+solution = solve(model, DP5(), saveat=0.1) .* 1e3
 
 # plotting
-plot(solution[[1,3,5], 100:end]')
+plot(solution[[1,3,5], :]')

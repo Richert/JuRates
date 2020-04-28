@@ -20,6 +20,7 @@ function stn_gpe(du, u, p, t)
 	k_ep_d = 5
 	k_p_d = 4
 	k_a_d = 4
+	r_s = 0.002
 
 	Δ_e = Δ_e*τ_e^2
 	Δ_p = Δ_p*τ_p^2
@@ -49,11 +50,11 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*0.002)*τ_p - (τ_p*π*r_p)^2) / τ_p
+    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*r_s)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
     # GPe-a
     du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*0.002)*τ_a - (τ_a*π*r_a)^2) / τ_a
+    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*r_s)*τ_a - (τ_a*π*r_a)^2) / τ_a
 
     # axonal propagation
     ####################
@@ -114,9 +115,9 @@ u0 = zeros(N,)
 tspan = [0., 200.]
 
 #rng = MersenneTwister(1234)
-Δ_e = 0.15
-Δ_p = 0.5
-Δ_a = 0.4
+Δ_e = 0.1
+Δ_p = 0.3
+Δ_a = 0.2
 
 η_e = 0.0
 η_p = 0.0
@@ -140,17 +141,45 @@ p0 = [η_e, η_p, η_a,
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
 
 # lower bounds
-p_lower = [-4.0, -4.0, -6.0,
-	0.0, 10.0, 3.0, 3.0, 2.0, 3.0, 3.0, 0.0, 3.0, 40.0,
-	0.05, 0.1, 0.1]
+p_lower = [-4.0, # η_e
+		   -4.0, # η_p
+		   -5.0, # η_a
+		   1.0, # k_ee
+		   20.0, # k_pe
+		   5.0, # k_ae
+		   10.0, # k_ep
+		   4.0, # k_pp
+		   10.0, # k_ap
+		   10.0, # k_pa
+		   0.0, # k_aa
+		   10.0, # k_ps
+		   30.0, # k_as
+		   0.05, # Δ_e
+		   0.2, # Δ_p
+		   0.1 # Δ_a
+		   ]
 
 # upper bounds
-p_upper = [2.0, 2.0, 0.0,
-	8.0, 200.0, 100.0, 100.0, 10.0, 100.0, 100.0, 8.0, 100.0, 400.0,
-	0.11, 0.5, 0.5]
+p_upper = [2.0, # η_e
+		   2.0, # η_p
+		   1.0, # η_a
+		   7.0, # k_ee
+		   200.0, # k_pe
+		   100.0, # k_ae
+		   100.0, # k_ep
+		   8.0, # k_pp
+		   150.0, # k_ap
+		   150.0, # k_pa
+		   8.0, # k_aa
+		   100.0, # k_ps
+		   300.0, # k_as
+		   0.11, # Δ_e
+		   0.6, # Δ_p
+		   0.4 # Δ_a
+		   ]
 
 # firing rate targets
-targets=[[19, 62, 35],  # healthy control
+targets=[[19, 62, 31],  # healthy control
          [missing, 35, missing],  # ampa blockade in GPe
          [missing, 76, missing],  # ampa and gabaa blockade in GPe
          [missing, 135, missing],  # GABAA blockade in GPe
@@ -215,17 +244,17 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=10000, workers=workers(), TargetFitness=0.0, PopulationSize=4000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=2000, workers=workers(), TargetFitness=0.0, PopulationSize=4000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
 # receive optimization results
 p = best_candidate(res)
 display(p)
-η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
+η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
 #sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
-#display(plot(sol[target_vars, :]', ylims=[0.0, 100.0]))
+#display(plot(sol[target_vars, :]'))
 
 # store best parameter set
 jname = ARGS[1]

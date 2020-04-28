@@ -1,25 +1,28 @@
 using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, Plots, BlackBoxOptim
 
 # definition of the motion equations
-τ_e = 13.0
-τ_p = 25.0
-τ_a = 20.0
-
 function stn_gpe(du, u, p, t)
 
     # extract state vars and params
 	###############################
     r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
 	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
+	r_s = u[47]
     η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
 	# set/adjust parameters
 	#######################
 
-	k_e_d = 4
 	k_ep_d = 5
 	k_p_d = 4
 	k_a_d = 4
+	k_e_d = 4
+	η_s = 0.002
+	τ_s = 1.0
+
+	τ_e = 13.0
+	τ_p = 25.0
+	τ_a = 20.0
 
 	Δ_e = Δ_e*τ_e^2
 	Δ_p = Δ_p*τ_p^2
@@ -49,16 +52,19 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*0.002)*τ_p - (τ_p*π*r_p)^2) / τ_p
+    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*r_s)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
     # GPe-a
     du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*0.002)*τ_a - (τ_a*π*r_a)^2) / τ_a
+    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*r_s)*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+	# dummy str
+	du[47] = (η_s - r_s) / τ_s
 
     # axonal propagation
     ####################
 
-    # STN to GPe-p
+    # STN projections
 	du[7] = k_e_d * (r_e - u[7])
 	du[8] = k_e_d * (u[7] - u[8])
 	du[9] = k_e_d * (u[8] - u[9])
@@ -109,35 +115,32 @@ function stn_gpe(du, u, p, t)
 end
 
 # initial condition and parameters
-N = 46
+N = 47
 u0 = zeros(N,)
-tspan = [0., 50.]
+tspan = [0., 100.]
 
 #rng = MersenneTwister(1234)
-# Δ_e = 0.15
-# Δ_p = 0.5
-# Δ_a = 0.4
-#
-# η_e = 0.0
-# η_p = 0.0
-# η_a = 0.0
-#
-# k_ee = 3.0
-# k_pe = 80.0
-# k_ae = 30.0
-# k_ep = 30.0
-# k_pp = 6.0
-# k_ap = 30.0
-# k_pa = 60.0
-# k_aa = 4.0
-# k_ps = 80.0
-# k_as = 160.0
+Δ_e = 0.1
+Δ_p = 0.3
+Δ_a = 0.2
 
-# initial parameters
-# p = [η_e, η_p, η_a,
-# 	k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as,
-# 	Δ_e, Δ_p, Δ_a]
-@load "BasalGanglia/results/new_fit_0_params.jdl" p
+η_e = -1.0
+η_p = -0.8
+η_a = -1.6
+
+k_ee = 6.0
+k_pe = 95.0
+k_ae = 38.0
+k_ep = 19.0
+k_pp = 8.0
+k_ap = 29.0
+k_pa = 67.0
+k_aa = 0.0
+k_ps = 45.0
+k_as = 188.0
+
+p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
+#@load "BasalGanglia/results/new_fit_1_params.jdl" p
 
 # firing rate targets
 targets=[[19, 62, 35],  # healthy control
