@@ -4,27 +4,25 @@ using DifferentialEquations,Plots,LSODA
 τ_p = 25.0
 τ_a = 20.0
 
-Δ_e = 0.05*τ_e^2
-Δ_p = 0.6*τ_p^2
-Δ_a = 0.3*τ_a^2
-
 # definition of the motion equations
 function stn_gpe(du, u, p, t)
 
     # extract state vars and params
 	###############################
     r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
-	r_xe, r_ep, r_xp, r_xa, r_ee = u[[22, 38, 42, 46, 50]]
-    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
+	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
+	r_s = u[47]
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
 	# set/adjust parameters
 	#######################
 
-	k_pe_d = 4
 	k_ep_d = 5
 	k_p_d = 4
 	k_a_d = 4
-	k_ee_d = 4
+	k_e_d = 4
+	η_s = 0.002
+	τ_s = 1.0
 
     # populations
     #############
@@ -35,32 +33,35 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*0.002)*τ_p - (τ_p*π*r_p)^2) / τ_e
+    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*r_s)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
     # GPe-a
     du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*0.002)*τ_a - (τ_a*π*r_a)^2) / τ_a
+    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*r_s)*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+	# dummy str
+	du[47] = (η_s - r_s) / τ_s
 
     # axonal propagation
     ####################
 
-    # STN to GPe-p
-	du[7] = k_pe_d * (r_e - u[7])
-	du[8] = k_pe_d * (u[7] - u[8])
-	du[9] = k_pe_d * (u[8] - u[9])
-	du[10] = k_pe_d * (u[9] - u[10])
-	du[11] = k_pe_d * (u[10] - u[11])
-	du[12] = k_pe_d * (u[11] - u[12])
-	du[13] = k_pe_d * (u[12] - u[13])
-	du[14] = k_pe_d * (u[13] - u[14])
-	du[15] = k_pe_d * (u[14] - u[15])
-	du[16] = k_pe_d * (u[15] - u[16])
-	du[17] = k_pe_d * (u[16] - u[17])
-	du[18] = k_pe_d * (u[17] - u[18])
-	du[19] = k_pe_d * (u[18] - u[19])
-	du[20] = k_pe_d * (u[19] - u[20])
-	du[21] = k_pe_d * (u[20] - u[21])
-	du[22] = k_pe_d * (u[21] - u[22])
+    # STN projections
+	du[7] = k_e_d * (r_e - u[7])
+	du[8] = k_e_d * (u[7] - u[8])
+	du[9] = k_e_d * (u[8] - u[9])
+	du[10] = k_e_d * (u[9] - u[10])
+	du[11] = k_e_d * (u[10] - u[11])
+	du[12] = k_e_d * (u[11] - u[12])
+	du[13] = k_e_d * (u[12] - u[13])
+	du[14] = k_e_d * (u[13] - u[14])
+	du[15] = k_e_d * (u[14] - u[15])
+	du[16] = k_e_d * (u[15] - u[16])
+	du[17] = k_e_d * (u[16] - u[17])
+	du[18] = k_e_d * (u[17] - u[18])
+	du[19] = k_e_d * (u[18] - u[19])
+	du[20] = k_e_d * (u[19] - u[20])
+	du[21] = k_e_d * (u[20] - u[21])
+	du[22] = k_e_d * (u[21] - u[22])
 
 	# GPe-p to STN
 	du[23] = k_ep_d * (r_p - u[23])
@@ -92,41 +93,41 @@ function stn_gpe(du, u, p, t)
 	du[45] = k_a_d * (u[44] - u[45])
 	du[46] = k_a_d * (u[45] - u[46])
 
-    # ! STN to STN
-	du[47] = k_ee_d * (r_e - u[47])
-	du[48] = k_ee_d * (u[47] - u[48])
-	du[49] = k_ee_d * (u[48] - u[49])
-	du[50] = k_ee_d * (u[49] - u[50])
-
 end
 
 
 # initial condition and parameters
-u0 = zeros(50,)
-tspan = [0., 50.]
+u0 = zeros(51,)
+tspan = [0., 25.]
 
-η_e = -1.48*Δ_e
-η_p = -3.24*Δ_p
-η_a = -13.20*Δ_a
+k = 1.0
 
-k_ee = 3.7*√Δ_e
-k_pe = 135.8*√Δ_p
-k_ae = 76.0*√Δ_a
-k_ep = 31.7*√Δ_e
-k_pp = 14.5*√Δ_p
-k_ap = 50.2*√Δ_a
-k_pa = 71.7*√Δ_p
-k_aa = 6.4*√Δ_a
-k_ps = 495.4*√Δ_p
-k_as = 584.3*√Δ_a
+Δ_e = 0.1*τ_e^2
+Δ_p = 0.3*τ_p^2/k
+Δ_a = 0.2*τ_a^2/k
 
-#p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
-@load "BasalGanglia/results/test_0_params.jdl" p_new
-p = p_new
+η_e = 0.0*Δ_e
+η_p = 0.0*Δ_p
+η_a = 0.0*Δ_a
+
+k_ee = 3.0*√Δ_e
+k_pe = 80.0*√Δ_p
+k_ae = 30.0*√Δ_a
+k_ep = 30.0*√Δ_e
+k_pp = 6.0*√Δ_p
+k_ap = 30.0*√Δ_a*k
+k_pa = 60.0*√Δ_p*k
+k_aa = 4.0*√Δ_a
+k_ps = 80.0*√Δ_p
+k_as = 160.0*√Δ_a
+
+p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
+#@load "BasalGanglia/results/test_0_params.jdl" p_new
+#p = p_new
 
 # model setup and numerical solution
 model = ODEProblem(stn_gpe, u0, tspan, p)
 solution = solve(model, DP5(), saveat=0.1)
 
 # plotting
-plot(solution[[1,3,5], :]')
+plot(solution[[1,3,5,47], :]')

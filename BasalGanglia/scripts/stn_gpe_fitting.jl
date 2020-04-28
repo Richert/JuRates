@@ -72,7 +72,7 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[9] = (Δ_p/(π*τ_p) + 2.0*r_p2*v_p2) / τ_p
-    du[10] = (v_p2^2 + η_p + (0.2*k_pe*r_pe2 - k_pp*r_xp2 - k_pa*r_xa2 - k_ps*0.002)*τ_p - (τ_p*π*r_p2)^2) / τ_e
+    du[10] = (v_p2^2 + η_p + (0.2*k_pe*r_pe2 - k_pp*r_xp2 - k_pa*r_xa2 - k_ps*0.002)*τ_p - (τ_p*π*r_p2)^2) / τ_p
 
     # GPe-a
     du[11] = (Δ_a/(π*τ_a) + 2.0*r_a2*v_a2) / τ_a
@@ -87,7 +87,7 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[15] = (Δ_p/(π*τ_p) + 2.0*r_p3*v_p3) / τ_p
-    du[16] = (v_p3^2 + η_p + 0.2*(k_pe*r_pe3 - k_pp*r_xp3 - k_pa*r_xa3 - k_ps*0.002)*τ_p - (τ_p*π*r_p3)^2) / τ_e
+    du[16] = (v_p3^2 + η_p + 0.2*(k_pe*r_pe3 - k_pp*r_xp3 - k_pa*r_xa3 - k_ps*0.002)*τ_p - (τ_p*π*r_p3)^2) / τ_p
 
     # GPe-a
     du[17] = (Δ_a/(π*τ_a) + 2.0*r_a3*v_a3) / τ_a
@@ -102,7 +102,7 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[21] = (Δ_p/(π*τ_p) + 2.0*r_p4*v_p4) / τ_p
-    du[22] = (v_p4^2 + η_p + 0.2*(k_pe*r_pe4*5.0 - k_pp*r_xp4 - k_pa*r_xa4 - k_ps*0.002)*τ_p - (τ_p*π*r_p4)^2) / τ_e
+    du[22] = (v_p4^2 + η_p + 0.2*(k_pe*r_pe4*5.0 - k_pp*r_xp4 - k_pa*r_xa4 - k_ps*0.002)*τ_p - (τ_p*π*r_p4)^2) / τ_p
 
     # GPe-a
     du[23] = (Δ_a/(π*τ_a) + 2.0*r_a4*v_a4) / τ_a
@@ -117,7 +117,7 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[27] = (Δ_p/(π*τ_p) + 2.0*r_p5*v_p5) / τ_p
-    du[28] = (v_p5^2 + η_p + (k_pe*r_pe5 - k_pp*r_xp5 - k_pa*r_xa5 - k_ps*0.002)*τ_p - (τ_p*π*r_p5)^2) / τ_e
+    du[28] = (v_p5^2 + η_p + (k_pe*r_pe5 - k_pp*r_xp5 - k_pa*r_xa5 - k_ps*0.002)*τ_p - (τ_p*π*r_p5)^2) / τ_p
 
     # GPe-a
     du[29] = (Δ_a/(π*τ_a) + 2.0*r_a5*v_a5) / τ_a
