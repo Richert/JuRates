@@ -1,25 +1,28 @@
-using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, Plots, BlackBoxOptim
+using DifferentialEquations,Plots,DiffEqSensitivity
 
 # definition of the motion equations
-τ_e = 13.0
-τ_p = 25.0
-τ_a = 20.0
-
 function stn_gpe(du, u, p, t)
 
     # extract state vars and params
 	###############################
     r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
 	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
+	r_s = u[47]
     η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
 	# set/adjust parameters
 	#######################
 
-	k_e_d = 4
 	k_ep_d = 5
 	k_p_d = 4
 	k_a_d = 4
+	k_e_d = 4
+	η_s = 0.002
+	τ_s = 1.0
+
+	τ_e = 13.0
+	τ_p = 25.0
+	τ_a = 20.0
 
 	Δ_e = Δ_e*τ_e^2
 	Δ_p = Δ_p*τ_p^2
@@ -49,16 +52,19 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*0.002)*τ_p - (τ_p*π*r_p)^2) / τ_p
+    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*r_s)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
     # GPe-a
     du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*0.002)*τ_a - (τ_a*π*r_a)^2) / τ_a
+    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*r_s)*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+	# dummy str
+	du[47] = (η_s - r_s) / τ_s
 
     # axonal propagation
     ####################
 
-    # STN to GPe-p
+    # STN projections
 	du[7] = k_e_d * (r_e - u[7])
 	du[8] = k_e_d * (u[7] - u[8])
 	du[9] = k_e_d * (u[8] - u[9])
@@ -108,83 +114,37 @@ function stn_gpe(du, u, p, t)
 
 end
 
+
 # initial condition and parameters
-N = 46
-u0 = zeros(N,)
-tspan = [0., 50.]
+u0 = zeros(47,)
+tspan = [0., 25.]
 
-#rng = MersenneTwister(1234)
-# Δ_e = 0.15
-# Δ_p = 0.5
-# Δ_a = 0.4
-#
-# η_e = 0.0
-# η_p = 0.0
-# η_a = 0.0
-#
-# k_ee = 3.0
-# k_pe = 80.0
-# k_ae = 30.0
-# k_ep = 30.0
-# k_pp = 6.0
-# k_ap = 30.0
-# k_pa = 60.0
-# k_aa = 4.0
-# k_ps = 80.0
-# k_as = 160.0
+Δ_e = 0.15
+Δ_p = 0.5
+Δ_a = 0.4
 
-# initial parameters
-# p = [η_e, η_p, η_a,
-# 	k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as,
-# 	Δ_e, Δ_p, Δ_a]
-@load "BasalGanglia/results/new_fit_0_params.jdl" p
+η_e = 0.0
+η_p = 0.0
+η_a = 0.0
 
-# firing rate targets
-targets=[[19, 62, 35],  # healthy control
-         [missing, 35, missing],  # ampa blockade in GPe
-         [missing, 76, missing],  # ampa and gabaa blockade in GPe
-         [missing, 135, missing],  # GABAA blockade in GPe
-         [38, 124, missing]  # GABAA blockade in STN
-        ]
-target_vars = [1, 3, 5]
+k_ee = 3.0
+k_pe = 80.0
+k_ae = 30.0
+k_ep = 30.0
+k_pp = 6.0
+k_ap = 30.0
+k_pa = 60.0
+k_aa = 4.0
+k_ps = 80.0
+k_as = 160.0
 
-# sweep conditions
-conditions = [
-	([], []),
-	([5, 6], [0.2, 0.2]),
-	([5, 6, 8, 9, 10, 11, 12, 13], [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]),
-	([8, 9, 10, 11, 12, 13], [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]),
-	([7], [0.2])
-]
+p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
+#@load "BasalGanglia/results/test_0_params.jdl" p_new
+#p = p_new
 
-# oscillation behavior targets
-freq_targets = [0.0, 0.0, 0.0, 0.0, missing]
+# model setup and numerical solution
+model = ODEProblem(stn_gpe, u0, tspan, p)
+solution = concrete_solve(model, DP5(), u0=model.u0, p=model.p, sensealg=InterpolatingAdjoint(), checkpoints=sol.t)
 
-# model definition
-stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
-
-# model simulation over conditions and calculation of loss
-function stn_gpe_run(p)
-
-	# calculate new
-	for i=1:length(targets)
-
-		# apply condition
-		indices, k_scales = conditions[i]
-		p_tmp = deepcopy(p)
-		for (idx, k) in zip(indices, k_scales)
-			p_tmp[idx] = p_tmp[idx] * k
-		end
-
-		# run simulation
-		sol = Array(solve(remake(stn_gpe_prob, p=p_tmp), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)) .* 1e3
-
-		# plot results
-		display(plot(sol[target_vars, :]'))
-		sleep(10.0)
-
-	end
-end
-
-# simulate conditions and plot them
-stn_gpe_run(p)
+# plotting
+plot(solution[[1,3,5,47], :]')

@@ -21,6 +21,25 @@ function stn_gpe(du, u, p, t)
 	k_p_d = 4
 	k_a_d = 4
 
+	Δ_e = Δ_e*τ_e^2
+	Δ_p = Δ_p*τ_p^2
+	Δ_a = Δ_a*τ_a^2
+
+	η_e = η_e*Δ_e
+	η_p = η_p*Δ_p
+	η_a = η_a*Δ_a
+
+	k_ee = k_ee*√Δ_e
+	k_pe = k_pe*√Δ_p
+	k_ae = k_ae*√Δ_a
+	k_ep = k_ep*√Δ_e
+	k_pp = k_pp*√Δ_p
+	k_ap = k_ap*√Δ_a
+	k_pa = k_pa*√Δ_p
+	k_aa = k_aa*√Δ_a
+	k_ps = k_ps*√Δ_p
+	k_as = k_as*√Δ_a
+
     # populations
     #############
 
@@ -92,37 +111,43 @@ end
 # initial condition and parameters
 N = 46
 u0 = zeros(N,)
-tspan = [0., 50.]
+tspan = [0., 200.]
 
 #rng = MersenneTwister(1234)
-Δ_e = 0.1*τ_e^2
-Δ_p = 0.3*τ_p^2
-Δ_a = 0.2*τ_a^2
+Δ_e = 0.15
+Δ_p = 0.5
+Δ_a = 0.4
 
-η_e = 0.0*Δ_e
-η_p = 0.0*Δ_p
-η_a = 0.0*Δ_a
+η_e = 0.0
+η_p = 0.0
+η_a = 0.0
 
-k_ee = 3.0*√Δ_e
-k_pe = 80.0*√Δ_p
-k_ae = 30.0*√Δ_a
-k_ep = 30.0*√Δ_e
-k_pp = 6.0*√Δ_p
-k_ap = 30.0*√Δ_a
-k_pa = 60.0*√Δ_p
-k_aa = 4.0*√Δ_a
-k_ps = 80.0*√Δ_p
-k_as = 160.0*√Δ_a
+k_ee = 3.0
+k_pe = 80.0
+k_ae = 30.0
+k_ep = 30.0
+k_pp = 6.0
+k_ap = 30.0
+k_pa = 60.0
+k_aa = 4.0
+k_ps = 80.0
+k_as = 160.0
 
 # initial parameters
-p0 = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
+p0 = [η_e, η_p, η_a,
+	k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as,
+	Δ_e, Δ_p, Δ_a]
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
 
 # lower bounds
-p_lower = [-4*Δ_e, -4*Δ_p, -4*Δ_a, 0.0, 10.0*√Δ_p, 3.0*√Δ_a, 3.0*√Δ_e, 2.0*√Δ_p, 3.0*√Δ_a, 10.0*√Δ_p, 0.0, 20.0*√Δ_p, 40.0*√Δ_a, 0.05*τ_e^2, 0.1*τ_p^2, 0.05*τ_a^2]
+p_lower = [-4.0, -4.0, -6.0,
+	0.0, 10.0, 3.0, 3.0, 2.0, 3.0, 3.0, 0.0, 3.0, 40.0,
+	0.05, 0.1, 0.1]
 
 # upper bounds
-p_upper = [2*Δ_e, 2*Δ_p, 2.0*Δ_a, 8*√Δ_e, 200*√Δ_p, 100*√Δ_a, 100*√Δ_e, 12*√Δ_p, 100*√Δ_a, 200*√Δ_p, 10*√Δ_a, 200*√Δ_p, 300*√Δ_a, 0.15*τ_e^2, 0.5*τ_p^2, 0.4*τ_a^2]
+p_upper = [2.0, 2.0, 0.0,
+	8.0, 200.0, 100.0, 100.0, 10.0, 100.0, 100.0, 8.0, 100.0, 400.0,
+	0.11, 0.5, 0.5]
 
 # firing rate targets
 targets=[[19, 62, 35],  # healthy control
@@ -151,52 +176,46 @@ stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p0)
 # model simulation over conditions and calculation of loss
 function stn_gpe_loss(p)
 
-	# apply new parameters
-	remake(stn_gpe_prob, p=p)
-
 	# calculate new
-	diff1, diff2, diff3 = 0, 0, 0
+	loss = []
 	for i=1:length(targets)
 
 		# apply condition
-		prob = deepcopy(stn_gpe_prob)
 		indices, k_scales = conditions[i]
-		p_tmp = prob.p
+		p_tmp = deepcopy(p)
 		for (idx, k) in zip(indices, k_scales)
 			p_tmp[idx] = p_tmp[idx] * k
 		end
 
 		# run simulation
-		sol = Array(solve(remake(prob, p=p_tmp), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)) .* 1e3
+		sol = Array(solve(remake(stn_gpe_prob, p=p_tmp), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)) .* 1e3
 
 		# calculate loss
-		sol_tmp = sol[target_vars, :]
 		target = targets[i]
 		freq_target = freq_targets[i]
 
-		diff1 += sum(((s-t)^2)/t for (s,t) in zip(mean(sol_tmp[:, 400:end],dims=2), target) if ! ismissing(t))
-	    diff2 += ismissing(freq_target) ? 0.0 : var(sol_tmp[2, 400:end])
-		r_max = maximum(maximum(abs.(sol_tmp[:, 200:end])))
-		diff3 += r_max^2 > 1000.0 ? r_max^2 : 0.0
+		diff1 = sum(((mean(sol[j, 1000:end])-t)^2)/t for (j,t) in zip(target_vars, target) if ! ismissing(t))
+	    diff2 = ismissing(freq_target) ? 0.0 : var(sol[2, 1000:end])
+		push!(loss, diff1 + √diff2)
 	end
-
-    return diff1 + diff2 + diff3
+	remake(stn_gpe_prob, p=p)
+    sum(loss)
 end
 
 # callback function
 fitness_progress_history = Array{Tuple{Int, Float64},1}()
 cb = function (oc) #callback function to observe training
-	p = best_candidate(oc)
-    sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
-	display(plot(sol[target_vars, :]'))
+	#p = best_candidate(oc)
+    #sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
+	#display(plot(sol[target_vars, :]'))
   return push!(fitness_progress_history, (BlackBoxOptim.num_func_evals(oc), best_fitness(oc)))
 end
 
 # choose optimization algorithm
-method = :adaptive_de_rand_1_bin_radiuslimited
+method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=1000, workers=workers(), TargetFitness=0.0, PopulationSize=4000, CallbackFunction=cb, CallbackInterval=1.0)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=10000, workers=workers(), TargetFitness=0.0, PopulationSize=4000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
@@ -205,11 +224,10 @@ p = best_candidate(res)
 display(p)
 η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
 
-stn_gpe_sweep = EnsembleProblem(remake(stn_gpe_prob, p=p), prob_func=stn_gpe_conditions)
-sol = solve(stn_gpe_sweep, DP5(), EnsembleDistributed(), trajectories=length(targets), saveat=0.1, reltol=1e-4, abstol=1e-6)
-display(plot(sol[target_vars, :, 1]'))
+#sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
+#display(plot(sol[target_vars, :]', ylims=[0.0, 100.0]))
 
 # store best parameter set
-jname = "new_fit"#ARGS[1]
-jid = 0#ARGS[2]
+jname = ARGS[1]
+jid = ARGS[2]
 @save "results/$jname" * "_$jid" * "_params.jdl" p

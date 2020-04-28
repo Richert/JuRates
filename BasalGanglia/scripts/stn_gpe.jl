@@ -24,6 +24,29 @@ function stn_gpe(du, u, p, t)
 	η_s = 0.002
 	τ_s = 1.0
 
+	τ_e = 13.0
+	τ_p = 25.0
+	τ_a = 20.0
+
+	Δ_e = Δ_e*τ_e^2
+	Δ_p = Δ_p*τ_p^2
+	Δ_a = Δ_a*τ_a^2
+
+	η_e = η_e*Δ_e
+	η_p = η_p*Δ_p
+	η_a = η_a*Δ_a
+
+	k_ee = k_ee*√Δ_e
+	k_pe = k_pe*√Δ_p
+	k_ae = k_ae*√Δ_a
+	k_ep = k_ep*√Δ_e
+	k_pp = k_pp*√Δ_p
+	k_ap = k_ap*√Δ_a
+	k_pa = k_pa*√Δ_p
+	k_aa = k_aa*√Δ_a
+	k_ps = k_ps*√Δ_p
+	k_as = k_as*√Δ_a
+
     # populations
     #############
 
@@ -98,36 +121,35 @@ end
 
 # initial condition and parameters
 u0 = zeros(51,)
-tspan = [0., 25.]
+tspan = [0., 250.]
 
 k = 1.0
 
-Δ_e = 0.1*τ_e^2
-Δ_p = 0.3*τ_p^2/k
-Δ_a = 0.2*τ_a^2/k
+# Δ_e = 0.1
+# Δ_p = 0.15
+# Δ_a = 0.38
+#
+# η_e = 0.65
+# η_p = 0.24
+# η_a = -3.56
+#
+# k_ee = 3.8
+# k_pe = 73.4
+# k_ae = 7.4
+# k_ep = 41.8
+# k_pp = 9.6
+# k_ap = 39.7
+# k_pa = 31.7
+# k_aa = 3.2
+# k_ps = 50.3
+# k_as = 260.2
 
-η_e = 0.0*Δ_e
-η_p = 0.0*Δ_p
-η_a = 0.0*Δ_a
-
-k_ee = 3.0*√Δ_e
-k_pe = 80.0*√Δ_p
-k_ae = 30.0*√Δ_a
-k_ep = 30.0*√Δ_e
-k_pp = 6.0*√Δ_p
-k_ap = 30.0*√Δ_a*k
-k_pa = 60.0*√Δ_p*k
-k_aa = 4.0*√Δ_a
-k_ps = 80.0*√Δ_p
-k_as = 160.0*√Δ_a
-
-p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
-#@load "BasalGanglia/results/test_0_params.jdl" p_new
-#p = p_new
+#p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
+@load "BasalGanglia/results/new_fit_0_params.jdl" p
 
 # model setup and numerical solution
 model = ODEProblem(stn_gpe, u0, tspan, p)
 solution = solve(model, DP5(), saveat=0.1)
 
 # plotting
-plot(solution[[1,3,5,47], :]')
+plot(solution[[1,3,5], 100:end]')
