@@ -154,9 +154,9 @@ p_lower = [-4.0, # η_e
 		   0.0, # k_aa
 		   10.0, # k_ps
 		   30.0, # k_as
-		   0.05, # Δ_e
+		   0.02, # Δ_e
 		   0.2, # Δ_p
-		   0.1 # Δ_a
+		   0.04 # Δ_a
 		   ]
 
 # upper bounds
@@ -173,7 +173,7 @@ p_upper = [2.0, # η_e
 		   8.0, # k_aa
 		   100.0, # k_ps
 		   300.0, # k_as
-		   0.11, # Δ_e
+		   0.2, # Δ_e
 		   0.6, # Δ_p
 		   0.4 # Δ_a
 		   ]
@@ -183,7 +183,7 @@ targets=[[19, 62, 31],  # healthy control
          [missing, 35, missing],  # ampa blockade in GPe
          [missing, 76, missing],  # ampa and gabaa blockade in GPe
          [missing, 135, missing],  # GABAA blockade in GPe
-         [38, 124, missing]  # GABAA blockade in STN
+         [35, 124, missing]  # GABAA blockade in STN
         ]
 target_vars = [1, 3, 5]
 
@@ -244,7 +244,7 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=2000, workers=workers(), TargetFitness=0.0, PopulationSize=4000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=1000, workers=workers(), TargetFitness=0.0, PopulationSize=4000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
@@ -257,6 +257,6 @@ display(p)
 #display(plot(sol[target_vars, :]'))
 
 # store best parameter set
-jname = ARGS[1]
-jid = ARGS[2]
-@save "results/$jname" * "_$jid" * "_params.jdl" p
+jname = "gen_opt"#ARGS[1]
+jid = 1#ARGS[2]
+@save "BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p

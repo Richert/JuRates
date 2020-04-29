@@ -139,52 +139,54 @@ k_ps = 80.0
 k_as = 160.0
 
 #p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
-@load "BasalGanglia/results/new_fit_1_params.jdl" p
+@load "BasalGanglia/results/stn_gpe_ev_opt_results/stn_gpe_ev_opt_41_params.jdl" p
 
 # lower bounds
-p_lower = [-4.0, # η_e
-		   -4.0, # η_p
-		   -5.0, # η_a
-		   1.0, # k_ee
-		   20.0, # k_pe
-		   5.0, # k_ae
-		   10.0, # k_ep
-		   4.0, # k_pp
-		   10.0, # k_ap
-		   10.0, # k_pa
+p_lower = [-8.0, # η_e
+		   -8.0, # η_p
+		   -8.0, # η_a
+		   0.0, # k_ee
+		   0.0, # k_pe
+		   0.0, # k_ae
+		   0.0, # k_ep
+		   0.0, # k_pp
+		   0.0, # k_ap
+		   0.0, # k_pa
 		   0.0, # k_aa
-		   10.0, # k_ps
-		   30.0, # k_as
-		   0.05, # Δ_e
-		   0.2, # Δ_p
-		   0.1 # Δ_a
+		   0.0, # k_ps
+		   0.0, # k_as
+		   0.01, # Δ_e
+		   0.01, # Δ_p
+		   0.01 # Δ_a
 		   ]
 
 # upper bounds
-p_upper = [2.0, # η_e
-		   2.0, # η_p
-		   1.0, # η_a
-		   7.0, # k_ee
-		   200.0, # k_pe
+p_upper = [8.0, # η_e
+		   8.0, # η_p
+		   8.0, # η_a
+		   10.0, # k_ee
+		   100.0, # k_pe
 		   100.0, # k_ae
 		   100.0, # k_ep
-		   8.0, # k_pp
-		   150.0, # k_ap
-		   150.0, # k_pa
-		   8.0, # k_aa
+		   10.0, # k_pp
+		   200.0, # k_ap
+		   200.0, # k_pa
+		   10.0, # k_aa
 		   100.0, # k_ps
 		   300.0, # k_as
-		   0.11, # Δ_e
-		   0.6, # Δ_p
-		   0.4 # Δ_a
+		   0.5, # Δ_e
+		   1.0, # Δ_p
+		   1.0 # Δ_a
 		   ]
+#p_lower = [p[i] <= 0 ? p[i]*10.0 : p[i]*0.1 for i=1:length(p)]
+#p_upper = [p[i] <= 0 ? p[i]*0.1 : p[i]*10.0 for i=1:length(p)]
 
 # firing rate targets
-targets=[[19, 62, 35],  # healthy control
+targets=[[19, 62, 31],  # healthy control
          [missing, 35, missing],  # ampa blockade in GPe
          [missing, 76, missing],  # ampa and gabaa blockade in GPe
          [missing, 135, missing],  # GABAA blockade in GPe
-         [38, 124, missing]  # GABAA blockade in STN
+         [35, 124, missing]  # GABAA blockade in STN
         ]
 target_vars = [1, 3, 5]
 
@@ -201,7 +203,7 @@ conditions = [
 freq_targets = [0.0, 0.0, 0.0, 0.0, missing]
 
 # model definition
-stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p0)
+stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
 
 # model simulation over conditions and calculation of loss
 function stn_gpe_loss(p)
