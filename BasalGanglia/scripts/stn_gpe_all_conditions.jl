@@ -184,7 +184,7 @@ function stn_gpe_run(p)
 
 		# plot results
 		display(plot(sol[target_vars, :]'))
-		sleep(10.0)
+		sleep(5.0)
 
 	end
 end

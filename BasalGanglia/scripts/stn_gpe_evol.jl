@@ -246,19 +246,21 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=6000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=2000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
 # receive optimization results
 p = best_candidate(res)
+f = best_fitness(res)
 display(p)
 η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
-sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
-display(plot(sol[target_vars, :]'))
+#sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
+#display(plot(sol[target_vars, :]'))
 
 # store best parameter set
-jname = "gen_opt"#ARGS[1]
-jid = 1#ARGS[2]
-@save "BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p
+jname = ARGS[1]
+jid = ARGS[2]
+@save "results/$jname" * "_$jid" * "_params.jdl" p
+@save "results/$jname" * "_$jid" * "_fitness.jdl" f

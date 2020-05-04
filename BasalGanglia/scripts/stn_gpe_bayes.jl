@@ -8,7 +8,7 @@ using Distributions, Random, Statistics, FileIO, JLD2, Distributed, Differential
 # definition of cortical input
 stim_t = 53.0
 stim_v = 0.5
-stim_off = 14.0
+stim_off = 10.0
 stim_amp = 50.0
 ctx_t = truncated(Normal(stim_t, stim_v), stim_t - 3.0, stim_t + 3.0)
 str_t = truncated(Normal(stim_t+stim_off, 2.0), stim_t+stim_off-8.0, stim_t+stim_off+8.0)
@@ -20,7 +20,8 @@ function stn_gpe(du, u, p, t)
 	###############################
     r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
 	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
-    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, Δ_e, Δ_p, Δ_a = p
+	r_s = u[47]
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc, Δ_e, Δ_p, Δ_a = p
 
 	# set/adjust parameters
 	#######################
@@ -29,7 +30,8 @@ function stn_gpe(du, u, p, t)
 	k_ep_d = 5
 	k_p_d = 4
 	k_a_d = 4
-	r_s = 0.002
+	η_s = 0.002
+	τ_s = 30.0
 
 	Δ_e = Δ_e*τ_e^2
 	Δ_p = Δ_p*τ_p^2
@@ -59,11 +61,14 @@ function stn_gpe(du, u, p, t)
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*(r_s+stim_amp*pdf(str_t,t)))*τ_p - (τ_p*π*r_p)^2) / τ_p
+    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*r_s)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
     # GPe-a
     du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*(r_s+stim_amp*pdf(str_t,t)))*τ_a - (τ_a*π*r_a)^2) / τ_a
+    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*r_s)*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+	# dummy STR
+	du[47] = (η_s + k_sc*stim_amp*pdf(str_t,t) - r_s) / τ_s
 
     # axonal propagation
     ####################
@@ -119,7 +124,7 @@ function stn_gpe(du, u, p, t)
 end
 
 # initial condition and parameters
-N = 46
+N = 47
 u0 = zeros(N,)
 tspan = [0., 200.]
 
@@ -143,10 +148,11 @@ k_aa = 4.0
 k_ps = 80.0
 k_as = 160.0
 k_ec = 100.0
+k_sc = 100.0
 
 # initial parameters
 p = [η_e, η_p, η_a,
-	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec,
+	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc,
 	 Δ_e, Δ_p, Δ_a]
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
 
@@ -165,6 +171,7 @@ p_lower = [-4.0, # η_e
 		   10.0, # k_ps
 		   30.0, # k_as
 		   10.0, # k_ec
+		   1.0, # k_sc
 		   0.02, # Δ_e
 		   0.2, # Δ_p
 		   0.1 # Δ_a
@@ -185,6 +192,7 @@ p_upper = [2.0, # η_e
 		   100.0, # k_ps
 		   300.0, # k_as
 		   400.0, # k_ec
+		   200.0, # k_sc
 		   0.2, # Δ_e
 		   0.6, # Δ_p
 		   0.5 # Δ_a
@@ -205,6 +213,7 @@ p_mean = [-0.5, # η_e
 		   20.0, # k_ps
 		   100.0, # k_as
 		   100.0, # k_ec
+		   100.0, # k_sc
 		   0.1, # Δ_e
 		   0.3, # Δ_p
 		   0.2 # Δ_a
@@ -225,6 +234,7 @@ p_var = [0.2, # η_e
 		 10.0, # k_ps
 		 40.0, # k_as
 		 50.0, # k_ec
+		 50.0, # k_sc
 		 0.05, # Δ_e
 		 0.1, # Δ_p
 		 0.1 # Δ_a
