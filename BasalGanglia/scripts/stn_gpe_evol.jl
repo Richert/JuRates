@@ -143,29 +143,29 @@ p0 = [η_e, η_p, η_a,
 # lower bounds
 p_lower = [-4.0, # η_e
 		   -4.0, # η_p
-		   -5.0, # η_a
+		   -6.0, # η_a
 		   1.0, # k_ee
-		   20.0, # k_pe
+		   5.0, # k_pe
 		   5.0, # k_ae
-		   10.0, # k_ep
-		   4.0, # k_pp
-		   10.0, # k_ap
-		   10.0, # k_pa
+		   5.0, # k_ep
+		   2.0, # k_pp
+		   5.0, # k_ap
+		   5.0, # k_pa
 		   0.0, # k_aa
-		   10.0, # k_ps
+		   5.0, # k_ps
 		   30.0, # k_as
 		   0.02, # Δ_e
 		   0.2, # Δ_p
-		   0.04 # Δ_a
+		   0.2 # Δ_a
 		   ]
 
 # upper bounds
 p_upper = [2.0, # η_e
 		   2.0, # η_p
-		   1.0, # η_a
+		   0.0, # η_a
 		   7.0, # k_ee
 		   200.0, # k_pe
-		   100.0, # k_ae
+		   200.0, # k_ae
 		   100.0, # k_ep
 		   8.0, # k_pp
 		   150.0, # k_ap
@@ -175,7 +175,7 @@ p_upper = [2.0, # η_e
 		   300.0, # k_as
 		   0.2, # Δ_e
 		   0.6, # Δ_p
-		   0.4 # Δ_a
+		   0.6 # Δ_a
 		   ]
 
 # firing rate targets
@@ -225,7 +225,9 @@ function stn_gpe_loss(p)
 
 		diff1 = sum(((mean(sol[j, 1000:end])-t)^2)/t for (j,t) in zip(target_vars, target) if ! ismissing(t))
 	    diff2 = ismissing(freq_target) ? 0.0 : var(sol[2, 1000:end])
-		push!(loss, diff1 + √diff2)
+		r_max = maximum(maximum(sol[target_vars, :]))
+		diff3 = r_max > 800.0 ? r_max - 800.0 : 0.0
+		push!(loss, diff1 + √diff2 + diff3)
 	end
 	remake(stn_gpe_prob, p=p)
     sum(loss)
@@ -244,7 +246,7 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=1000, workers=workers(), TargetFitness=0.0, PopulationSize=4000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=6000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
@@ -253,8 +255,8 @@ p = best_candidate(res)
 display(p)
 η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
-#sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
-#display(plot(sol[target_vars, :]'))
+sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
+display(plot(sol[target_vars, :]'))
 
 # store best parameter set
 jname = "gen_opt"#ARGS[1]

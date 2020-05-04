@@ -1,4 +1,4 @@
-using DifferentialEquations,Plots,DiffEqSensitivity,Statistics,QuasiMonteCarlo
+using DifferentialEquations,Plots,DiffEqSensitivity,Statistics,QuasiMonteCarlo, FileIO, JLD2
 
 # definition of the motion equations
 function stn_gpe(du, u, p, t)
@@ -8,7 +8,7 @@ function stn_gpe(du, u, p, t)
     r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
 	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
 	r_s = u[47]
-    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a, k_e, k_p, k_a, k, k_inh, k_exc = p
 
 	# set/adjust parameters
 	#######################
@@ -32,16 +32,16 @@ function stn_gpe(du, u, p, t)
 	η_p = η_p*Δ_p
 	η_a = η_a*Δ_a
 
-	k_ee = k_ee*√Δ_e
-	k_pe = k_pe*√Δ_p
-	k_ae = k_ae*√Δ_a
-	k_ep = k_ep*√Δ_e
-	k_pp = k_pp*√Δ_p
-	k_ap = k_ap*√Δ_a
-	k_pa = k_pa*√Δ_p
-	k_aa = k_aa*√Δ_a
-	k_ps = k_ps*√Δ_p
-	k_as = k_as*√Δ_a
+	k_ee = k*k_e*k_exc*k_ee*√Δ_e
+	k_pe = k*k_p*k_exc*k_pe*√Δ_p
+	k_ae = k*k_a*k_exc*k_ae*√Δ_a
+	k_ep = k*k_e*k_inh*k_ep*√Δ_e
+	k_pp = k*k_p*k_inh*k_pp*√Δ_p
+	k_ap = k*k_a*k_inh*k_ap*√Δ_a
+	k_pa = k*k_p*k_inh*k_pa*√Δ_p
+	k_aa = k*k_a*k_inh*k_aa*√Δ_a
+	k_ps = k*k_p*k_inh*k_ps*√Δ_p
+	k_as = k*k_a*k_inh*k_as*√Δ_a
 
     # populations
     #############
@@ -138,45 +138,88 @@ k_aa = 4.0
 k_ps = 80.0
 k_as = 160.0
 
-#p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
-@load "BasalGanglia/results/stn_gpe_ev_opt_results/stn_gpe_ev_opt_41_params.jdl" p
+# grouped connection scalings
+k_e = 1.0
+k_p = 1.0
+k_a = 1.0
+k = 1.0
+k_inh = 1.0
+k_exc = 1.0
+
+p = [η_e,
+	 η_p,
+	 η_a,
+	 k_ee,
+	 k_pe,
+	 k_ae,
+	 k_ep,
+	 k_pp,
+	 k_ap,
+	 k_pa,
+	 k_aa,
+	 k_ps,
+	 k_as,
+	 Δ_e,
+	 Δ_p,
+	 Δ_a,
+	 k_e,
+	 k_p,
+	 k_a,
+	 k,
+	 k_inh,
+	 k_exc
+	 ]
+#@load "BasalGanglia/results/stn_gpe_ev_opt_results_final/stn_gpe_ev_opt2_63_params.jdl" p
+#p = [p; [k_e, k_p, k_a, k, k_inh, k_exc]]
 
 # lower bounds
-p_lower = [-8.0, # η_e
-		   -8.0, # η_p
-		   -8.0, # η_a
-		   0.0, # k_ee
-		   0.0, # k_pe
-		   0.0, # k_ae
-		   0.0, # k_ep
-		   0.0, # k_pp
-		   0.0, # k_ap
-		   0.0, # k_pa
-		   0.0, # k_aa
-		   0.0, # k_ps
-		   0.0, # k_as
+p_lower = [-6.0, # η_e
+		   -6.0, # η_p
+		   -6.0, # η_a
+		   1.0, # k_ee
+		   10.0, # k_pe
+		   10.0, # k_ae
+		   10.0, # k_ep
+		   1.0, # k_pp
+		   10.0, # k_ap
+		   10.0, # k_pa
+		   1.0, # k_aa
+		   10.0, # k_ps
+		   10.0, # k_as
 		   0.01, # Δ_e
-		   0.01, # Δ_p
-		   0.01 # Δ_a
+		   0.05, # Δ_p
+		   0.05, # Δ_a
+		   0.9, # k_e
+		   0.9, # k_p
+		   0.9, # k_a
+		   0.9, # k
+		   0.9, # k_inh
+		   0.9, # k_exc
 		   ]
 
 # upper bounds
-p_upper = [8.0, # η_e
-		   8.0, # η_p
-		   8.0, # η_a
+p_upper = [2.0, # η_e
+		   2.0, # η_p
+		   2.0, # η_a
 		   10.0, # k_ee
-		   100.0, # k_pe
+		   150.0, # k_pe
 		   100.0, # k_ae
 		   100.0, # k_ep
-		   10.0, # k_pp
-		   200.0, # k_ap
-		   200.0, # k_pa
+		   20.0, # k_pp
+		   150.0, # k_ap
+		   150.0, # k_pa
 		   10.0, # k_aa
 		   100.0, # k_ps
 		   300.0, # k_as
-		   0.5, # Δ_e
+		   0.2, # Δ_e
 		   1.0, # Δ_p
-		   1.0 # Δ_a
+		   1.0, # Δ_a
+		   5.0, # k_e
+		   5.0, # k_p
+		   5.0, # k_a
+		   5.0, # k
+		   5.0, # k_inh
+		   5.0, # k_exc
 		   ]
 #p_lower = [p[i] <= 0 ? p[i]*10.0 : p[i]*0.1 for i=1:length(p)]
 #p_upper = [p[i] <= 0 ? p[i]*0.1 : p[i]*10.0 for i=1:length(p)]
@@ -220,7 +263,7 @@ function stn_gpe_loss(p)
 		end
 
 		# run simulation
-		sol = Array(solve(remake(stn_gpe_prob, p=p_tmp), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)) .* 1e3
+		sol = Array(solve(remake(stn_gpe_prob, p=p_tmp), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6, maxiter=1e8)) .* 1e3
 
 		# calculate loss
 		target = targets[i]
@@ -241,7 +284,8 @@ A, B = QuasiMonteCarlo.generate_design_matrices(n_samples, p_lower, p_upper, sam
 sobol_result = gsa(stn_gpe_loss, Sobol(), A, B)
 
 # visualization of sobol indices
-param_names = ["η_e", "η_p", "η_a", "k_ee", "k_pe", "k_ae", "k_ep", "k_pp", "k_ap", "k_pa", "k_aa", "k_ps", "k_as", "Δ_e", "Δ_p", "Δ_a"]
+param_names = ["η_e", "η_p", "η_a", "k_ee", "k_pe", "k_ae", "k_ep", "k_pp", "k_ap", "k_pa", "k_aa", "k_ps", "k_as", "Δ_e", "Δ_p", "Δ_a", "k_e", "k_p", "k_a", "k", "k_inh", "k_exc"
+]
 p1 = bar(param_names, sobol_result.ST, title="Total Order Indices", legend=false)
 p2 = bar(param_names, sobol_result.S1, title="First Order Indices", legend=false)
 plot(p1)

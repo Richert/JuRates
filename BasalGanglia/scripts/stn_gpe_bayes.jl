@@ -1,116 +1,260 @@
-using Plots, DifferentialEquations, DiffEqBayes
+using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, Plots, DiffEqBayes, Turing
 
-# definition of the motion equations
-function stn_gpe(du, u, p, t)
-
-    # extract state vars and params
-    r_e, v_e, r_p, v_p, r_a, v_a = u
-    η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, τ_e, τ_p, τ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as = p
-
-    # STN
-    du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
-    du[2] = (v_e^2 + η_e + (k_ee*r_e - k_ep*r_p)*τ_e - (τ_e*π*r_e)^2) / τ_e
-
-    # GPe-p
-    du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_e - k_pp*r_p - k_pa*r_a - k_ps*0.002)*τ_p - (τ_p*π*r_p)^2) / τ_e
-
-    # GPe-a
-    du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_e - k_ap*r_p - k_aa*r_a - k_as*0.002)*τ_a - (τ_a*π*r_a)^2) / τ_a
-
-end
-
-# initial condition and parameters
-u0 = zeros(6,)
-tmax = 100.0
-tspan = [0., tmax]
-#u0_f(p,t0) = [p[2],p[4]]
-#tspan_f(p) = (0.0,10*p[4])
-
+# definition of fixed parameters
 τ_e = 13.0
 τ_p = 25.0
 τ_a = 20.0
 
-Δ_e = 0.347*τ_e^2
-Δ_p = 0.593*τ_p^2
-Δ_a = 0.778*τ_a^2
+# definition of cortical input
+stim_t = 53.0
+stim_v = 0.5
+stim_off = 14.0
+stim_amp = 50.0
+ctx_t = truncated(Normal(stim_t, stim_v), stim_t - 3.0, stim_t + 3.0)
+str_t = truncated(Normal(stim_t+stim_off, 2.0), stim_t+stim_off-8.0, stim_t+stim_off+8.0)
 
-η_e = -1.48*Δ_e
-η_p = -3.24*Δ_p
-η_a = -13.20*Δ_a
+# definition of the equations of motion
+function stn_gpe(du, u, p, t)
 
-k_ee = 25.5*√Δ_e
-k_pe = 188.4*√Δ_p
-k_ae = 58.2*√Δ_a
-k_ep = 184.1*√Δ_e
-k_pp = 42.6*√Δ_p
-k_ap = 137.8*√Δ_a
-k_pa = 58.8*√Δ_p
-k_aa = 6.9*√Δ_a
-k_ps = 585.8*√Δ_p
-k_as = 126.0*√Δ_a
+    # extract state vars and params
+	###############################
+    r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
+	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, Δ_e, Δ_p, Δ_a = p
 
-p = [η_e, η_p, η_a, Δ_e, Δ_p, Δ_a, τ_e, τ_p, τ_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as]
+	# set/adjust parameters
+	#######################
 
-conditions = [([], []),  # healthy control
-              ([11,12], [0.2,0.2]), # AMPA blockade in GPe
-              ([11,12,14,15,16,17,18,19], [0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2]), # AMPA blockade and GABAA blockade in GPe
-              ([14,15,16,17,18,19], [0.2,0.2,0.2,0.2,0.2,0.2]), # GABAA blockade in GPe
-              ([11,12], [0.0,0.0]), # STN blockade
-              ([11,12,14,15,16,17,18,19], [0.0,0.0,0.2,0.2,0.2,0.2,0.2,0.2]), # STN blockade + GABAA blockade in GPe
-              ([13], [0.2]) # GABAA blocker in STN
-             ]
+	k_e_d = 4
+	k_ep_d = 5
+	k_p_d = 4
+	k_a_d = 4
+	r_s = 0.002
+
+	Δ_e = Δ_e*τ_e^2
+	Δ_p = Δ_p*τ_p^2
+	Δ_a = Δ_a*τ_a^2
+
+	η_e = η_e*Δ_e
+	η_p = η_p*Δ_p
+	η_a = η_a*Δ_a
+
+	k_ee = k_ee*√Δ_e
+	k_pe = k_pe*√Δ_p
+	k_ae = k_ae*√Δ_a
+	k_ep = k_ep*√Δ_e
+	k_pp = k_pp*√Δ_p
+	k_ap = k_ap*√Δ_a
+	k_pa = k_pa*√Δ_p
+	k_aa = k_aa*√Δ_a
+	k_ps = k_ps*√Δ_p
+	k_as = k_as*√Δ_a
+
+    # populations
+    #############
+
+    # STN
+    du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
+    du[2] = (v_e^2 + η_e + (k_ee*r_ee - k_ep*r_ep + k_ec*stim_amp*pdf(ctx_t,t))*τ_e - (τ_e*π*r_e)^2) / τ_e
+
+    # GPe-p
+    du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
+    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*(r_s+stim_amp*pdf(str_t,t)))*τ_p - (τ_p*π*r_p)^2) / τ_p
+
+    # GPe-a
+    du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
+    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*(r_s+stim_amp*pdf(str_t,t)))*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+    # axonal propagation
+    ####################
+
+    # STN to GPe-p
+	du[7] = k_e_d * (r_e - u[7])
+	du[8] = k_e_d * (u[7] - u[8])
+	du[9] = k_e_d * (u[8] - u[9])
+	du[10] = k_e_d * (u[9] - u[10])
+	du[11] = k_e_d * (u[10] - u[11])
+	du[12] = k_e_d * (u[11] - u[12])
+	du[13] = k_e_d * (u[12] - u[13])
+	du[14] = k_e_d * (u[13] - u[14])
+	du[15] = k_e_d * (u[14] - u[15])
+	du[16] = k_e_d * (u[15] - u[16])
+	du[17] = k_e_d * (u[16] - u[17])
+	du[18] = k_e_d * (u[17] - u[18])
+	du[19] = k_e_d * (u[18] - u[19])
+	du[20] = k_e_d * (u[19] - u[20])
+	du[21] = k_e_d * (u[20] - u[21])
+	du[22] = k_e_d * (u[21] - u[22])
+
+	# GPe-p to STN
+	du[23] = k_ep_d * (r_p - u[23])
+	du[24] = k_ep_d * (u[23] - u[24])
+	du[25] = k_ep_d * (u[24] - u[25])
+	du[26] = k_ep_d * (u[25] - u[26])
+	du[27] = k_ep_d * (u[26] - u[27])
+	du[28] = k_ep_d * (u[27] - u[28])
+	du[29] = k_ep_d * (u[28] - u[29])
+	du[30] = k_ep_d * (u[29] - u[30])
+	du[31] = k_ep_d * (u[30] - u[31])
+	du[32] = k_ep_d * (u[31] - u[32])
+	du[33] = k_ep_d * (u[32] - u[33])
+	du[34] = k_ep_d * (u[33] - u[34])
+	du[35] = k_ep_d * (u[34] - u[35])
+	du[36] = k_ep_d * (u[35] - u[36])
+	du[37] = k_ep_d * (u[36] - u[37])
+	du[38] = k_ep_d * (u[37] - u[38])
+
+	# Gpe-p to both GPes
+	du[39] = k_p_d * (r_p - u[39])
+	du[40] = k_p_d * (u[39] - u[40])
+	du[41] = k_p_d * (u[40] - u[41])
+	du[42] = k_p_d * (u[41] - u[42])
+
+	# ! Gpe-a to both GPes
+	du[43] = k_a_d * (r_a - u[43])
+	du[44] = k_a_d * (u[43] - u[44])
+	du[45] = k_a_d * (u[44] - u[45])
+	du[46] = k_a_d * (u[45] - u[46])
+
+end
+
+# initial condition and parameters
+N = 46
+u0 = zeros(N,)
+tspan = [0., 200.]
+
+#rng = MersenneTwister(1234)
+Δ_e = 0.1
+Δ_p = 0.3
+Δ_a = 0.2
+
+η_e = 0.0
+η_p = 0.0
+η_a = 0.0
+
+k_ee = 3.0
+k_pe = 80.0
+k_ae = 30.0
+k_ep = 30.0
+k_pp = 6.0
+k_ap = 30.0
+k_pa = 60.0
+k_aa = 4.0
+k_ps = 80.0
+k_as = 160.0
+k_ec = 100.0
+
+# initial parameters
+p = [η_e, η_p, η_a,
+	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec,
+	 Δ_e, Δ_p, Δ_a]
+#@load "BasalGanglia/results/stn_gpe_params.jld" p
+
+# lower bounds
+p_lower = [-4.0, # η_e
+		   -4.0, # η_p
+		   -5.0, # η_a
+		   1.0, # k_ee
+		   10.0, # k_pe
+		   5.0, # k_ae
+		   5.0, # k_ep
+		   2.0, # k_pp
+		   10.0, # k_ap
+		   10.0, # k_pa
+		   0.0, # k_aa
+		   10.0, # k_ps
+		   30.0, # k_as
+		   10.0, # k_ec
+		   0.02, # Δ_e
+		   0.2, # Δ_p
+		   0.1 # Δ_a
+		   ]
+
+# upper bounds
+p_upper = [2.0, # η_e
+		   2.0, # η_p
+		   1.0, # η_a
+		   7.0, # k_ee
+		   200.0, # k_pe
+		   150.0, # k_ae
+		   100.0, # k_ep
+		   8.0, # k_pp
+		   150.0, # k_ap
+		   150.0, # k_pa
+		   8.0, # k_aa
+		   100.0, # k_ps
+		   300.0, # k_as
+		   400.0, # k_ec
+		   0.2, # Δ_e
+		   0.6, # Δ_p
+		   0.5 # Δ_a
+		   ]
+
+# prior means
+p_mean = [-0.5, # η_e
+		  -0.5, # η_p
+		  -1.0, # η_a
+		   4.0, # k_ee
+		   80.0, # k_pe
+		   40.0, # k_ae
+		   10.0, # k_ep
+		   6.0, # k_pp
+		   60.0, # k_ap
+		   60.0, # k_pa
+		   2.0, # k_aa
+		   20.0, # k_ps
+		   100.0, # k_as
+		   100.0, # k_ec
+		   0.1, # Δ_e
+		   0.3, # Δ_p
+		   0.2 # Δ_a
+		   ]
+
+# prior means
+p_var = [0.2, # η_e
+		 0.4, # η_p
+		 0.4, # η_a
+		 2.0, # k_ee
+		 20.0, # k_pe
+		 10.0, # k_ae
+		 5.0, # k_ep
+		 2.0, # k_pp
+		 20.0, # k_ap
+		 20.0, # k_pa
+		 1.0, # k_aa
+		 10.0, # k_ps
+		 40.0, # k_as
+		 50.0, # k_ec
+		 0.05, # Δ_e
+		 0.1, # Δ_p
+		 0.1 # Δ_a
+		   ]
+
+priors = [truncated(Normal(mu, sigma), l, u) for (mu, sigma, l, u) in zip(p_mean, p_var, p_lower, p_upper)]
 
 # firing rate targets
-targets=[[20, 60, 30]  # healthy control
-         [NaN, 30, NaN]  # ampa blockade in GPe
-         [NaN, 70, NaN]  # ampa and gabaa blockade in GPe
-         [NaN, 100, NaN]  # GABAA blockade in GPe
-         [NaN, 20, NaN]  # STN blockade
-         [NaN, 60, NaN]  # STN blockade + gabaa blockade in GPe
-         [40, 100, NaN]  # GABAA blockade in STN
-        ]
-#targets = [20, 60, 30]
+targets=VectorOfArray([[20.0, 60.0],  # steady-state (t = stim_t)
+         [150.0, 60.0],  # first peak stn (t = stim_t + 3.0)
+         [80.0, 200.0],  # first peak gpe (t = stim_t + 8.0))
+         [200.0, 10.0],  # second stn peak (t = sim_t + 18.0)
+		 [150.0, 400.0],  # second gpe peak (t = sim_t + 25.0)
+		 [10.0, 200.0]
+        ])
+target_vars = [1, 3]
+times = [stim_t,
+		 stim_t+3.0,
+		 stim_t+8.0,
+		 stim_t+18.0,
+		 stim_t+25.0,
+		 stim_t+33.0
+		]
 
-n = length(conditions)
+# model definition
+stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p0)
 
-# model definition and initial simulation
-model = ODEProblem(stn_gpe, u0, tspan, p)
-sol = solve(model, Tsit5())
+# perform bayesian optimization
+bayesian_result = turing_inference(stn_gpe_prob, DP5(), times, targets, priors; save_idxs=target_vars)
 
-# data collection
-t = collect(range(10,stop=tmax,length=10))
-randomized = VectorOfArray([(sol(t[i]) + .1randn(2)) for i in 1:length(t)])
-data = convert(Array,randomized)
-
-# prior definition
-priors = [Normal(-2.0*Δ_e,4.0*Δ_e), # η_e
-          Normal(-4.0*Δ_p,4.0*Δ_p), # η_p
-          Normal(-8.0*Δ_a,4.0*Δ_a), # η_a
-          Truncated(Normal(0.2*τ_e^2,0.2*τ_e^2),0.0,0.5*τ_e^2), # Δ_e
-          Truncated(Normal(0.6*τ_p^2,0.3*τ_p^2),0.0,1.0*τ_p^2), # Δ_p
-          Truncated(Normal(0.6*τ_a^2,0.3*τ_a^2),0.0,1.0*τ_a^2), # Δ_a
-          Normal(13.0,0.1), # τ_e
-          Normal(25,0.1), # τ_p
-          Normal(20,0.1), # τ_a
-          Uniform(0,50*√Δ_e), # k_ee
-          Uniform(0,400*√Δ_p), # k_pe
-          Uniform(0,400*√Δ_a), # k_ae
-          Uniform(0,400*√Δ_e), # k_ep
-          Uniform(0,200*√Δ_p), # k_pp
-          Uniform(0,200*√Δ_a), # k_ap
-          Uniform(0,200*√Δ_p), # k_pa
-          Uniform(0,200*√Δ_a), # k_aa
-          Uniform(0,600*√Δ_p), # k_ps
-          Uniform(0,600*√Δ_a), # k_as
-          ]
-
-# perform bayesian inference
-bayes = stan_inference(model,t,data,priors;
-                       num_samples=100,num_warmup=500,
-                       vars = (StanODEData(),InverseGamma(19,1)))
-
-# show results
-Mamba.describe(bayes.chain_results)
-plot_chain(bayes)
+# check out results
+#Mamba.describe(bayesian_result)
+plot_chain(bayesian_result)
