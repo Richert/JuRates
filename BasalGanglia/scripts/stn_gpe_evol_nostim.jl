@@ -269,7 +269,7 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=4000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=4000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
