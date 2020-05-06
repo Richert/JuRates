@@ -167,7 +167,7 @@ k_sc = 8.0
 # p = [η_e, η_p, η_a,
 # 	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc,
 # 	 Δ_e, Δ_p, Δ_a]
-p = [-0.174442, -0.65565, -3.38727, 4.28434, 115.794, 90.7101, 31.5017, 9.98262, 169.813, 199.992, 3.60192e-10, 140.531, 400.0, k_ec, k_sc, 0.1, 0.383785, 0.2]
+p = [-0.852927, 0.609272, 2.0, 3.16454, 92.7354, 139.869, 165.673, 3.56878, 184.42, 36.2838, 20.4119, 200.0, 375.543, k_ec, k_sc, 0.1, 0.116437, 0.2]
 
 target_vars = [1, 3, 5]
 times = [stim_t,
@@ -184,4 +184,4 @@ solution = solve(model, Tsit5(), save_idxs=target_vars, dense=true)
 display([(t, solution(t) .* 1e3) for t in times])
 
 # plotting
-plot(solution.t, solution' .* 1e3)
+plot(solution.t, solution' .* 1e3, ylims=[0., 150.0])

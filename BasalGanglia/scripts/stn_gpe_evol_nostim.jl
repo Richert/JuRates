@@ -162,7 +162,7 @@ p = [η_e, η_p, η_a,
 # lower bounds
 p_lower = [-4.0, # η_e
 		   -4.0, # η_p
-		   -6.0, # η_a
+		   -4.0, # η_a
 		   0.0, # k_ee
 		   1.0, # k_pe
 		   1.0, # k_ae
@@ -172,16 +172,16 @@ p_lower = [-4.0, # η_e
 		   1.0, # k_pa
 		   0.0, # k_aa
 		   1.0, # k_ps
-		   3.0, # k_as
-		   0.01, # Δ_e
-		   0.1, # Δ_p
-		   0.02, # Δ_a
+		   2.0, # k_as
+		   0.02, # Δ_e
+		   0.06, # Δ_p
+		   0.03, # Δ_a
 		   ]
 
 # upper bounds
 p_upper = [4.0, # η_e
 		   4.0, # η_p
-		   2.0, # η_a
+		   4.0, # η_a
 		   10.0, # k_ee
 		   200.0, # k_pe
 		   200.0, # k_ae
@@ -192,9 +192,9 @@ p_upper = [4.0, # η_e
 		   50.0, # k_aa
 		   200.0, # k_ps
 		   400.0, # k_as
-		   0.1, # Δ_e
-		   0.4, # Δ_p
-		   0.2, # Δ_a
+		   0.2, # Δ_e
+		   0.6, # Δ_p
+		   0.3, # Δ_a
 		   ]
 
 # firing rate targets
@@ -269,7 +269,7 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=4000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=1000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
