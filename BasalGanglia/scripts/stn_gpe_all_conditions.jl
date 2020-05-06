@@ -140,7 +140,7 @@ tspan = [0., 100.]
 # k_as = 188.0
 #
 # p = [η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a]
-@load "BasalGanglia/results/gen_opt_1_params.jdl" p
+@load "BasalGanglia/results/test_params_0_params.jdl" p
 
 # firing rate targets
 targets=[[19, 62, 35],  # healthy control

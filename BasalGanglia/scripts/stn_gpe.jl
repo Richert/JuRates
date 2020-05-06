@@ -1,4 +1,4 @@
-using DifferentialEquations,Plots,LSODA
+using DifferentialEquations,Plots
 
 # definition of fixed parameters
 τ_e = 13.0
@@ -8,10 +8,9 @@ using DifferentialEquations,Plots,LSODA
 # definition of cortical input
 stim_t = 53.0
 stim_v = 0.5
-stim_off = 10.0
-stim_amp = 50.0
-ctx_t = truncated(Normal(stim_t, stim_v), stim_t - 3.0, stim_t + 3.0)
-str_t = truncated(Normal(stim_t+stim_off, 2.0), stim_t+stim_off-8.0, stim_t+stim_off+8.0)
+stim_off = 8.0
+ctx_t = truncated(Normal(stim_t, stim_v), stim_t - 4.0, stim_t + 4.0)
+str_t = truncated(Normal(stim_t+stim_off, stim_v), stim_t+stim_off-4.0, stim_t+stim_off+4.0)
 
 # definition of the equations of motion
 function stn_gpe(du, u, p, t)
@@ -129,35 +128,46 @@ u0 = zeros(N,)
 tspan = [0., 200.]
 
 #rng = MersenneTwister(1234)
-Δ_e = 0.1
-Δ_p = 0.3
-Δ_a = 0.2
+Δ_e = 0.034
+Δ_p = 0.156
+Δ_a = 0.122
 
-η_e = 0.0
-η_p = 0.0
-η_a = 0.0
+η_e = -0.10
+η_p = -0.17
+η_a = -3.38
 
-k_ee = 3.0
-k_pe = 80.0
-k_ae = 30.0
-k_ep = 30.0
-k_pp = 6.0
-k_ap = 30.0
-k_pa = 60.0
-k_aa = 4.0
-k_ps = 80.0
-k_as = 160.0
-k_ec = 100.0
-k_sc = 100.0
+k_ee = 3.1
+k_pe = 67.3
+k_ae = 79.7
+k_ep = 7.3
+k_pp = 4.3
+k_ap = 16.3
+k_pa = 31.0
+k_aa = 0.9
+k_ps = 170.6
+k_as = 220.3
+k_ec = 20.0
+k_sc = 40.0
 
 # initial parameters
-p = [η_e, η_p, η_a,
-	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc,
-	 Δ_e, Δ_p, Δ_a]
+#p = [η_e, η_p, η_a,
+#	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc,
+#	 Δ_e, Δ_p, Δ_a]
+p = [0.136352, -0.162204, -5.15764, 1.27053, 68.4302, 97.1904, 12.8139, 5.76641, 23.6344, 43.0543, 6.99906, 49.7033, 123.721, k_ec, k_sc, 0.05464, 0.150244, 0.149955]
+
+target_vars = [1, 3, 5]
+times = [stim_t,
+		 stim_t+3.0,
+		 stim_t+8.0,
+		 stim_t+18.0,
+		 stim_t+25.0,
+		 stim_t+33.0
+		]
 
 # model setup and numerical solution
 model = ODEProblem(stn_gpe, u0, tspan, p)
-solution = solve(model, DP5(), saveat=0.1) .* 1e3
+solution = solve(model, Tsit5(), save_idxs=target_vars, dense=true)
+display([(t, solution(t) .* 1e3) for t in times])
 
 # plotting
-plot(solution[[1,3,5], :]')
+plot(solution.t, solution' .* 1e3)

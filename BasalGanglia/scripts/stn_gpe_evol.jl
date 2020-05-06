@@ -1,26 +1,50 @@
 using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, Plots, BlackBoxOptim
 
-# definition of the motion equations
+# definition of fixed parameters
 τ_e = 13.0
 τ_p = 25.0
 τ_a = 20.0
+τ_e_ampa_r = 0.8
+τ_e_ampa_d = 3.7
+τ_p_ampa_r = 0.8
+τ_p_ampa_d = 3.7
+τ_a_ampa_r = 0.8
+τ_a_ampa_d = 3.7
+τ_e_gabaa_r = 0.8
+τ_e_gabaa_d = 10.0
+τ_p_gabaa_r = 0.5
+τ_p_gabaa_d = 5.0
+τ_a_gabaa_r = 0.5
+τ_a_gabaa_d = 5.0
 
-function stn_gpe(du, u, p, t)
+# definition of cortical input
+stim_t = 60.0
+stim_v = 0.5
+stim_off = 10.0
+ctx_t = truncated(Normal(stim_t, stim_v), stim_t - 4.0, stim_t + 4.0)
+str_t = truncated(Normal(stim_t+stim_off, 2*stim_v), stim_t+stim_off-4.0, stim_t+stim_off+4.0)
+
+# definition of the equations of motion
+function stn_gpe_stim(du, u, p, t)
 
     # extract state vars and params
 	###############################
-    r_e, v_e, r_p, v_p, r_a, v_a = u[1:6]
-	r_ee, r_xe, r_ep, r_xp, r_xa = u[[10, 22, 38, 42, 46]]
-    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
+
+    r_e, v_e, r_p, v_p, r_a, v_a, r_s = u[1:7]
+	E_e, x_e, I_e, y_e, E_p, x_p, I_p, y_p, E_a, x_a, I_a, y_a = u[8:19]
+	r_xe, r_ep, r_xp, r_xa, r_ee = u[[27, 31, 33, 35, 37]]
+
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc, Δ_e, Δ_p, Δ_a, τ_s = p
 
 	# set/adjust parameters
 	#######################
 
-	k_e_d = 4
-	k_ep_d = 5
-	k_p_d = 4
-	k_a_d = 4
-	r_s = 0.002
+	k_ee_d = 1.14  # order = 2
+	k_pe_d = 2.67  # order = 8
+	k_ep_d = 2.0  # order = 4
+	k_p_d = 1.33  # order = 2
+	k_a_d = 1.33  # order = 2
+	η_s = 0.002
 
 	Δ_e = Δ_e*τ_e^2
 	Δ_p = Δ_p*τ_p^2
@@ -46,71 +70,185 @@ function stn_gpe(du, u, p, t)
 
     # STN
     du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
-    du[2] = (v_e^2 + η_e + (k_ee*r_ee - k_ep*r_ep)*τ_e - (τ_e*π*r_e)^2) / τ_e
+    du[2] = (v_e^2 + η_e + (E_e - I_e)*τ_e - (τ_e*π*r_e)^2) / τ_e
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
-    du[4] = (v_p^2 + η_p + (k_pe*r_xe - k_pp*r_xp - k_pa*r_xa - k_ps*r_s)*τ_p - (τ_p*π*r_p)^2) / τ_p
+    du[4] = (v_p^2 + η_p + (E_p - I_p)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
     # GPe-a
     du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
-    du[6] = (v_a^2 + η_a + (k_ae*r_xe - k_ap*r_xp - k_aa*r_xa - k_as*r_s)*τ_a - (τ_a*π*r_a)^2) / τ_a
+    du[6] = (v_a^2 + η_a + (E_a - I_a)*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+	# dummy STR
+	du[7] = (η_s + k_sc*pdf(str_t,t) - r_s) / τ_s
+
+	# synapse dynamics
+    ##################
+
+	# at STN
+	du[8] = x_e
+	du[9] = (k_ee*r_ee + k_ec*pdf(ctx_t,t) - x_e*(τ_e_ampa_r+τ_e_ampa_d) - E_e)/(τ_e_ampa_r*τ_e_ampa_d)
+	du[10] = y_e
+	du[11] = (k_ep*r_ep - y_e*(τ_e_gabaa_r+τ_e_gabaa_d) - I_e)/(τ_e_gabaa_r*τ_e_gabaa_d)
+
+	# at GPe-p
+	du[12] = x_p
+	du[13] = (k_pe*r_xe - x_p*(τ_p_ampa_r+τ_p_ampa_d) - E_p)/(τ_p_ampa_r*τ_p_ampa_d)
+	du[14] = y_p
+	du[15] = (k_pp*r_xp + k_pa*r_xa + k_ps*r_s - y_p*(τ_p_gabaa_r+τ_p_gabaa_d) - I_p)/(τ_p_gabaa_r*τ_p_gabaa_d)
+
+	# at GPe-a
+	du[16] = x_a
+	du[17] = (k_ae*r_xe - x_a*(τ_a_ampa_r+τ_a_ampa_d) - E_a)/(τ_a_ampa_r*τ_a_ampa_d)
+	du[18] = y_a
+	du[19] = (k_ap*r_xp + k_aa*r_xa + k_as*r_s - y_a*(τ_a_gabaa_r+τ_a_gabaa_d) - I_a)/(τ_a_gabaa_r*τ_a_gabaa_d)
 
     # axonal propagation
     ####################
 
-    # STN to GPe-p
-	du[7] = k_e_d * (r_e - u[7])
-	du[8] = k_e_d * (u[7] - u[8])
-	du[9] = k_e_d * (u[8] - u[9])
-	du[10] = k_e_d * (u[9] - u[10])
-	du[11] = k_e_d * (u[10] - u[11])
-	du[12] = k_e_d * (u[11] - u[12])
-	du[13] = k_e_d * (u[12] - u[13])
-	du[14] = k_e_d * (u[13] - u[14])
-	du[15] = k_e_d * (u[14] - u[15])
-	du[16] = k_e_d * (u[15] - u[16])
-	du[17] = k_e_d * (u[16] - u[17])
-	du[18] = k_e_d * (u[17] - u[18])
-	du[19] = k_e_d * (u[18] - u[19])
-	du[20] = k_e_d * (u[19] - u[20])
-	du[21] = k_e_d * (u[20] - u[21])
-	du[22] = k_e_d * (u[21] - u[22])
+    # STN to both GPe
+	du[20] = k_pe_d * (r_e - u[20])
+	du[21] = k_pe_d * (u[20] - u[21])
+	du[22] = k_pe_d * (u[21] - u[22])
+	du[23] = k_pe_d * (u[22] - u[23])
+	du[24] = k_pe_d * (u[23] - u[24])
+	du[25] = k_pe_d * (u[24] - u[25])
+	du[26] = k_pe_d * (u[25] - u[26])
+	du[27] = k_pe_d * (u[26] - u[27])
 
 	# GPe-p to STN
-	du[23] = k_ep_d * (r_p - u[23])
-	du[24] = k_ep_d * (u[23] - u[24])
-	du[25] = k_ep_d * (u[24] - u[25])
-	du[26] = k_ep_d * (u[25] - u[26])
-	du[27] = k_ep_d * (u[26] - u[27])
-	du[28] = k_ep_d * (u[27] - u[28])
+	du[28] = k_ep_d * (r_p - u[28])
 	du[29] = k_ep_d * (u[28] - u[29])
 	du[30] = k_ep_d * (u[29] - u[30])
 	du[31] = k_ep_d * (u[30] - u[31])
-	du[32] = k_ep_d * (u[31] - u[32])
-	du[33] = k_ep_d * (u[32] - u[33])
-	du[34] = k_ep_d * (u[33] - u[34])
-	du[35] = k_ep_d * (u[34] - u[35])
-	du[36] = k_ep_d * (u[35] - u[36])
-	du[37] = k_ep_d * (u[36] - u[37])
-	du[38] = k_ep_d * (u[37] - u[38])
 
 	# Gpe-p to both GPes
-	du[39] = k_p_d * (r_p - u[39])
-	du[40] = k_p_d * (u[39] - u[40])
-	du[41] = k_p_d * (u[40] - u[41])
-	du[42] = k_p_d * (u[41] - u[42])
+	du[32] = k_p_d * (r_p - u[32])
+	du[33] = k_p_d * (u[32] - u[33])
 
-	# ! Gpe-a to both GPes
-	du[43] = k_a_d * (r_a - u[43])
-	du[44] = k_a_d * (u[43] - u[44])
-	du[45] = k_a_d * (u[44] - u[45])
-	du[46] = k_a_d * (u[45] - u[46])
+	# Gpe-a to both GPes
+	du[34] = k_a_d * (r_a - u[34])
+	du[35] = k_a_d * (u[34] - u[35])
+
+	# STN to STN
+	du[36] = k_ee_d * (r_e - u[36])
+	du[37] = k_ee_d * (u[36] - u[37])
+
+end
+
+function stn_gpe(du, u, p, t)
+
+    # extract state vars and params
+	###############################
+    r_e, v_e, r_p, v_p, r_a, v_a, r_s = u[1:7]
+	r_xe, r_ep, r_xp, r_xa, r_ee = u[[27, 31, 33, 35, 37]]
+	E_e, x_e, I_e, y_e, E_p, x_p, I_p, y_p, E_a, x_a, I_a, y_a = u[8:19]
+    η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc, Δ_e, Δ_p, Δ_a, τ_s = p
+
+	# set/adjust parameters
+	#######################
+
+	k_ee_d = 1.14  # order = 2
+	k_pe_d = 2.67  # order = 8
+	k_ep_d = 2.0  # order = 4
+	k_p_d = 1.33  # order = 2
+	k_a_d = 1.33  # order = 2
+	η_s = 0.002
+
+	Δ_e = Δ_e*τ_e^2
+	Δ_p = Δ_p*τ_p^2
+	Δ_a = Δ_a*τ_a^2
+
+	η_e = η_e*Δ_e
+	η_p = η_p*Δ_p
+	η_a = η_a*Δ_a
+
+	k_ee = k_ee*√Δ_e
+	k_pe = k_pe*√Δ_p
+	k_ae = k_ae*√Δ_a
+	k_ep = k_ep*√Δ_e
+	k_pp = k_pp*√Δ_p
+	k_ap = k_ap*√Δ_a
+	k_pa = k_pa*√Δ_p
+	k_aa = k_aa*√Δ_a
+	k_ps = k_ps*√Δ_p
+	k_as = k_as*√Δ_a
+
+    # populations
+    #############
+
+    # STN
+    du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
+    du[2] = (v_e^2 + η_e + (E_e - I_e)*τ_e - (τ_e*π*r_e)^2) / τ_e
+
+    # GPe-p
+    du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
+    du[4] = (v_p^2 + η_p + (E_p - I_p)*τ_p - (τ_p*π*r_p)^2) / τ_p
+
+    # GPe-a
+    du[5] = (Δ_a/(π*τ_a) + 2.0*r_a*v_a) / τ_a
+    du[6] = (v_a^2 + η_a + (E_a - I_a)*τ_a - (τ_a*π*r_a)^2) / τ_a
+
+	# dummy STR
+	du[7] = (η_s - r_s) / τ_s
+
+	# synapse dynamics
+    ##################
+
+	# at STN
+	du[8] = x_e
+	du[9] = (k_ee*r_ee - x_e*(τ_e_ampa_r+τ_e_ampa_d) - E_e)/(τ_e_ampa_r*τ_e_ampa_d)
+	du[10] = y_e
+	du[11] = (k_ep*r_ep - y_e*(τ_e_gabaa_r+τ_e_gabaa_d) - I_e)/(τ_e_gabaa_r*τ_e_gabaa_d)
+
+	# at GPe-p
+	du[12] = x_p
+	du[13] = (k_pe*r_xe - x_p*(τ_p_ampa_r+τ_p_ampa_d) - E_p)/(τ_p_ampa_r*τ_p_ampa_d)
+	du[14] = y_p
+	du[15] = (k_pp*r_xp + k_pa*r_xa + k_ps*r_s - y_p*(τ_p_gabaa_r+τ_p_gabaa_d) - I_p)/(τ_p_gabaa_r*τ_p_gabaa_d)
+
+	# at GPe-a
+	du[16] = x_a
+	du[17] = (k_ae*r_xe - x_a*(τ_a_ampa_r+τ_a_ampa_d) - E_a)/(τ_a_ampa_r*τ_a_ampa_d)
+	du[18] = y_a
+	du[19] = (k_ap*r_xp + k_aa*r_xa + k_as*r_s - y_a*(τ_a_gabaa_r+τ_a_gabaa_d) - I_a)/(τ_a_gabaa_r*τ_a_gabaa_d)
+
+    # axonal propagation
+    ####################
+
+    # STN to both GPe
+	du[20] = k_pe_d * (r_e - u[20])
+	du[21] = k_pe_d * (u[20] - u[21])
+	du[22] = k_pe_d * (u[21] - u[22])
+	du[23] = k_pe_d * (u[22] - u[23])
+	du[24] = k_pe_d * (u[23] - u[24])
+	du[25] = k_pe_d * (u[24] - u[25])
+	du[26] = k_pe_d * (u[25] - u[26])
+	du[27] = k_pe_d * (u[26] - u[27])
+
+	# GPe-p to STN
+	du[28] = k_ep_d * (r_p - u[28])
+	du[29] = k_ep_d * (u[28] - u[29])
+	du[30] = k_ep_d * (u[29] - u[30])
+	du[31] = k_ep_d * (u[30] - u[31])
+
+	# Gpe-p to both GPes
+	du[32] = k_p_d * (r_p - u[32])
+	du[33] = k_p_d * (u[32] - u[33])
+
+	# Gpe-a to both GPes
+	du[34] = k_a_d * (r_a - u[34])
+	du[35] = k_a_d * (u[34] - u[35])
+
+	# STN to STN
+	du[36] = k_ee_d * (r_e - u[36])
+	du[37] = k_ee_d * (u[36] - u[37])
 
 end
 
 # initial condition and parameters
-N = 46
+N = 37
 u0 = zeros(N,)
 tspan = [0., 200.]
 
@@ -133,49 +271,59 @@ k_pa = 60.0
 k_aa = 4.0
 k_ps = 80.0
 k_as = 160.0
+k_ec = 20.0
+k_sc = 20.0
+
+τ_s = 2.0
 
 # initial parameters
-p0 = [η_e, η_p, η_a,
-	k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as,
-	Δ_e, Δ_p, Δ_a]
+p = [η_e, η_p, η_a,
+	k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc,
+	Δ_e, Δ_p, Δ_a, τ_s]
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
 
 # lower bounds
 p_lower = [-4.0, # η_e
 		   -4.0, # η_p
 		   -6.0, # η_a
-		   1.0, # k_ee
-		   5.0, # k_pe
-		   5.0, # k_ae
-		   5.0, # k_ep
-		   2.0, # k_pp
-		   5.0, # k_ap
-		   5.0, # k_pa
+		   0.0, # k_ee
+		   1.0, # k_pe
+		   1.0, # k_ae
+		   1.0, # k_ep
+		   0.0, # k_pp
+		   1.0, # k_ap
+		   1.0, # k_pa
 		   0.0, # k_aa
-		   5.0, # k_ps
-		   30.0, # k_as
+		   3.0, # k_ps
+		   3.0, # k_as
+		   1.0, # k_ec
+		   1.0, # k_sc
 		   0.02, # Δ_e
-		   0.2, # Δ_p
-		   0.2 # Δ_a
+		   0.15, # Δ_p
+		   0.05, # Δ_a
+		   0.5, # τ_s
 		   ]
 
 # upper bounds
-p_upper = [2.0, # η_e
-		   2.0, # η_p
-		   0.0, # η_a
-		   7.0, # k_ee
-		   200.0, # k_pe
-		   200.0, # k_ae
+p_upper = [4.0, # η_e
+		   4.0, # η_p
+		   2.0, # η_a
+		   10.0, # k_ee
+		   100.0, # k_pe
+		   100.0, # k_ae
 		   100.0, # k_ep
-		   8.0, # k_pp
-		   150.0, # k_ap
-		   150.0, # k_pa
-		   8.0, # k_aa
-		   100.0, # k_ps
+		   10.0, # k_pp
+		   100.0, # k_ap
+		   100.0, # k_pa
+		   10.0, # k_aa
+		   300.0, # k_ps
 		   300.0, # k_as
-		   0.2, # Δ_e
-		   0.6, # Δ_p
-		   0.6 # Δ_a
+		   300.0, # k_ec
+		   300.0, # k_sc
+		   0.06, # Δ_e
+		   0.35, # Δ_p
+		   0.15, # Δ_a
+		   30.0, # τ_s
 		   ]
 
 # firing rate targets
@@ -199,8 +347,29 @@ conditions = [
 # oscillation behavior targets
 freq_targets = [0.0, 0.0, 0.0, 0.0, missing]
 
+# stimulation condition
+target_vars_t = [1, 3]
+times = [stim_t,
+		 stim_t+2.0,
+		 stim_t+4.0,
+		 stim_t+18.0,
+		 stim_t+25.0,
+		 stim_t+33.0,
+		 stim_t+60.0
+		]
+targets_t=[
+		 [20.0, 60.0],  # steady-state (t = stim_t)
+         [150.0, 60.0],  # first peak stn (t = stim_t + 3.0)
+         [80.0, 400.0],  # first peak gpe (t = stim_t + 8.0))
+         [200.0, 10.0],  # second stn peak (t = sim_t + 18.0)
+		 [150.0, 400.0],  # second gpe peak (t = sim_t + 25.0)
+		 [10.0, 200.0],  # fall of of second gpe peak (t = sim_t + 33.0)
+		 [20.0, 60.0],  # steady-sate (t = stim_t + 60.0)
+        ]
+
 # model definition
-stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p0)
+stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
+stn_gpe_stim_prob = ODEProblem(stn_gpe_stim, u0, tspan, p)
 
 # model simulation over conditions and calculation of loss
 function stn_gpe_loss(p)
@@ -224,21 +393,31 @@ function stn_gpe_loss(p)
 		freq_target = freq_targets[i]
 
 		diff1 = sum(((mean(sol[j, 1000:end])-t)^2)/t for (j,t) in zip(target_vars, target) if ! ismissing(t))
-	    diff2 = ismissing(freq_target) ? 0.0 : var(sol[2, 1000:end])
+	    diff2 = ismissing(freq_target) ? 1/var(sol[2,200:end]) : var(sol[2, 1000:end])
 		r_max = maximum(maximum(sol[target_vars, :]))
-		diff3 = r_max > 800.0 ? r_max - 800.0 : 0.0
+		diff3 = r_max > 1000.0 ? r_max - 1000.0 : 0.0
 		push!(loss, diff1 + √diff2 + diff3)
 	end
+
+	# extra stimulation condition
+	sol = solve(remake(stn_gpe_stim_prob, p=p), DP5(), save_idxs=target_vars_t, dense=true)
+	diff4 = sum((sol(t)[1]*1e3-tar[1])^2/tar[1] + (sol(t)[2]*1e3-tar[2])^2/tar[2] for (t, tar) in zip(times, targets_t))
+	push!(loss, diff4)
+
+	# save new parameterization
 	remake(stn_gpe_prob, p=p)
+	remake(stn_gpe_stim_prob, p=p)
+
+	# return loss
     sum(loss)
 end
 
 # callback function
 fitness_progress_history = Array{Tuple{Int, Float64},1}()
 cb = function (oc) #callback function to observe training
-	#p = best_candidate(oc)
-    #sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
-	#display(plot(sol[target_vars, :]'))
+	p = best_candidate(oc)
+    sol = Array(solve(remake(stn_gpe_stim_prob, p=p), DP5(), reltol=1e-4, abstol=1e-6, save_idxs=target_vars, saveat=0.1))
+	display(plot(sol[:, 500:1000]' .* 1e3))
   return push!(fitness_progress_history, (BlackBoxOptim.num_func_evals(oc), best_fitness(oc)))
 end
 
@@ -246,7 +425,7 @@ end
 method = :dxnes
 
 # start optimization
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=2000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p0, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p0), MaxSteps=200, workers=workers(), TargetFitness=0.0, PopulationSize=10000, CallbackFunction=cb, CallbackInterval=1.0)
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
@@ -254,13 +433,13 @@ t = round(el, digits=3)
 p = best_candidate(res)
 f = best_fitness(res)
 display(p)
-η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
+η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a, τ_s = p
 
-#sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6) .* 1e3
-#display(plot(sol[target_vars, :]'))
+sol = solve(remake(stn_gpe_stim_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)
+display(plot(sol[target_vars, :]' .* 1e3))
 
 # store best parameter set
-jname = ARGS[1]
-jid = ARGS[2]
-@save "results/$jname" * "_$jid" * "_params.jdl" p
-@save "results/$jname" * "_$jid" * "_fitness.jdl" f
+jname = "test_params"#ARGS[1]
+jid = 0#ARGS[2]
+@save "BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p
+@save "BasalGanglia/results/$jname" * "_$jid" * "_fitness.jdl" f
