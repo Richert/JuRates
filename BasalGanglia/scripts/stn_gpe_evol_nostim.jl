@@ -182,16 +182,16 @@ p_lower = [-4.0, # η_e
 p_upper = [4.0, # η_e
 		   4.0, # η_p
 		   4.0, # η_a
-		   10.0, # k_ee
-		   200.0, # k_pe
-		   200.0, # k_ae
-		   200.0, # k_ep
-		   50.0, # k_pp
-		   200.0, # k_ap
-		   200.0, # k_pa
-		   50.0, # k_aa
-		   200.0, # k_ps
-		   400.0, # k_as
+		   20.0, # k_ee
+		   300.0, # k_pe
+		   300.0, # k_ae
+		   300.0, # k_ep
+		   60.0, # k_pp
+		   300.0, # k_ap
+		   300.0, # k_pa
+		   60.0, # k_aa
+		   300.0, # k_ps
+		   600.0, # k_as
 		   0.2, # Δ_e
 		   0.6, # Δ_p
 		   0.3, # Δ_a
@@ -269,9 +269,7 @@ end
 method = :dxnes
 
 # start optimization
-
 opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=4000, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
-
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
 
@@ -281,8 +279,8 @@ f = best_fitness(res)
 display(p)
 η_e, η_p, η_a, k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, Δ_e, Δ_p, Δ_a = p
 
-#sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)
-#display(plot(sol[target_vars, :]' .* 1e3))
+sol = solve(remake(stn_gpe_prob, p=p), DP5(), saveat=0.1, reltol=1e-4, abstol=1e-6)
+display(plot(sol[target_vars, :]' .* 1e3))
 
 # store best parameter set
 jname = ARGS[1]
