@@ -19,10 +19,11 @@ using DifferentialEquations,Plots
 
 # definition of cortical input
 stim_t = 50.0
-stim_v = 0.2
+stim_v = 8.0
 stim_off = 8.0
-ctx_t = truncated(Normal(stim_t, stim_v), stim_t - 2.0, stim_t + 2.0)
-str_t = truncated(Normal(stim_t+stim_off, stim_v), stim_t+stim_off-2.0, stim_t+stim_off+2.0)
+stim_cut = 10.0
+ctx_t = truncated(Normal(stim_t, stim_v), stim_t - stim_cut, stim_t + stim_cut)
+str_t = truncated(Normal(stim_t+stim_off, stim_v), stim_t+stim_off-stim_cut, stim_t+stim_off+stim_cut)
 
 # definition of the equations of motion
 function stn_gpe(du, u, p, t)
@@ -142,32 +143,32 @@ u0 = zeros(N,)
 tspan = [0., 200.]
 
 #rng = MersenneTwister(1234)
-Δ_e = 0.034
-Δ_p = 0.156
-Δ_a = 0.122
+Δ_e = 0.190
+Δ_p = 0.232
+Δ_a = 0.174
 
-η_e = -0.10
-η_p = -0.17
-η_a = -3.38
+η_e = -1.45
+η_p = 0.08
+η_a = -0.05
 
-k_ee = 3.1
-k_pe = 67.3
-k_ae = 79.7
-k_ep = 7.3
-k_pp = 4.3
-k_ap = 16.3
-k_pa = 31.0
-k_aa = 0.9
-k_ps = 170.6
-k_as = 220.3
-k_ec = 60.0
+k_ee = 20.0
+k_pe = 188.8
+k_ae = 219.1
+k_ep = 81.6
+k_pp = 30.5
+k_ap = 48.3
+k_pa = 64.6
+k_aa = 54.7
+k_ps = 162.4
+k_as = 586.4
+k_ec = 120.0
 k_sc = 8.0
 
 # initial parameters
 # p = [η_e, η_p, η_a,
 # 	 k_ee, k_pe, k_ae, k_ep, k_pp, k_ap, k_pa, k_aa, k_ps, k_as, k_ec, k_sc,
 # 	 Δ_e, Δ_p, Δ_a]
-p = [-0.852927, 0.609272, 2.0, 3.16454, 92.7354, 139.869, 165.673, 3.56878, 184.42, 36.2838, 20.4119, 200.0, 375.543, k_ec, k_sc, 0.1, 0.116437, 0.2]
+p = [0.353187, 0.144213, 0.773834, 0.936228, 111.021, 9.50729, 27.944, 8.74943, 1.0, 85.6519, 22.2876, 92.3297, 236.319, k_ec, k_sc, 0.0888827, 0.28181, 0.0915281]
 
 target_vars = [1, 3, 5]
 times = [stim_t,
@@ -184,4 +185,4 @@ solution = solve(model, Tsit5(), save_idxs=target_vars, dense=true)
 display([(t, solution(t) .* 1e3) for t in times])
 
 # plotting
-plot(solution.t, solution' .* 1e3, ylims=[0., 150.0])
+plot(solution.t, solution' .* 1e3)

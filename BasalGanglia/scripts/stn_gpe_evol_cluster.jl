@@ -160,41 +160,41 @@ p = [η_e, η_p, η_a,
 #@load "BasalGanglia/results/stn_gpe_params.jld" p
 
 # lower bounds
-p_lower = [-4.0, # η_e
-		   -4.0, # η_p
-		   -4.0, # η_a
+p_lower = [-10.0, # η_e
+		   -10.0, # η_p
+		   -10.0, # η_a
 		   0.0, # k_ee
 		   20.0, # k_pe
 		   20.0, # k_ae
 		   10.0, # k_ep
-		   0.0, # k_pp
-		   0.0, # k_ap
-		   0.0, # k_pa
-		   0.0, # k_aa
+		   19.0, # k_pp
+		   79.0, # k_ap
+		   19.0, # k_pa
+		   4.0, # k_aa
 		   30.0, # k_ps
 		   60.0, # k_as
 		   0.05, # Δ_e
-		   0.1, # Δ_p
-		   0.1, # Δ_a
+		   0.09, # Δ_p
+		   0.19, # Δ_a
 		   ]
 
 # upper bounds
-p_upper = [4.0, # η_e
-		   4.0, # η_p
-		   4.0, # η_a
+p_upper = [10.0, # η_e
+		   10.0, # η_p
+		   10.0, # η_a
 		   10.0, # k_ee
 		   200.0, # k_pe
 		   200.0, # k_ae
 		   200.0, # k_ep
-		   60.0, # k_pp
-		   200.0, # k_ap
-		   200.0, # k_pa
-		   60.0, # k_aa
+		   21.0, # k_pp
+		   81.0, # k_ap
+		   21.0, # k_pa
+		   6.0, # k_aa
 		   300.0, # k_ps
 		   600.0, # k_as
-		   0.15, # Δ_e
-		   0.4, # Δ_p
-		   0.3, # Δ_a
+		   0.25, # Δ_e
+		   0.11, # Δ_p
+		   0.21, # Δ_a
 		   ]
 
 # firing rate targets
@@ -243,7 +243,7 @@ function stn_gpe_loss(p)
 		freq_target = freq_targets[i]
 
 		diff1 = sum(((mean(sol[j, 1000:end])-t)^2)/t for (j,t) in zip(target_vars, target) if ! ismissing(t))
-	    diff2 = ismissing(freq_target) ? 1/var(sol[2,200:end]) : var(sol[2, 1000:end])
+	    diff2 = ismissing(freq_target) ? 0.0 : var(sol[2, 1000:end])
 		r_max = maximum(maximum(sol[target_vars, :]))
 		diff3 = r_max > 1000.0 ? r_max - 1000.0 : 0.0
 		push!(loss, diff1 + √diff2 + diff3)
