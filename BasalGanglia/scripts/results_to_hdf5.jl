@@ -1,7 +1,7 @@
 using HDF5, FileIO, JLD2
 
-path = "BasalGanglia/results/stn_gpe_ev_opt_results_final/"
-id = "stn_gpe_ev_opt"
+path = "BasalGanglia/results/stn_gpe_syns//"
+id = "stn_gpe_syns_opt"
 
 params = ["eta_e", "eta_p", "eta_a", "k_ee", "k_pe", "k_ae", "k_ep", "k_pp", "k_ap", "k_pa", "k_aa", "k_ps", "k_as", "delta_e", "delta_p", "delta_a"]
 
