@@ -247,5 +247,5 @@ sol = Array(solve(remake(stn_gpe_prob, p=p), Tsit5(), saveat=dts, reltol=1e-8, a
 # store best parameter set
 jname = ARGS[1]
 jid = ARGS[2]
-@save "/draco/ptmp/JuRates/BasalGanglia/results/$jname" * "_$jid" * "_params.jdl" p
-@save "/draco/ptmp/JuRates/BasalGanglia/results/$jname" * "_$jid" * "_fitness.jdl" f
+@save "../results/$jname" * "_$jid" * "_params.jdl" p
+@save "../results/$jname" * "_$jid" * "_fitness.jdl" f
