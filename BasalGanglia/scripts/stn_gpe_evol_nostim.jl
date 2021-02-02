@@ -226,7 +226,7 @@ end
 method = :dxnes
 
 # start optimization: add callback via CallbackFunction=cb, CallbackInterval=1.0
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=100, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
 
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
