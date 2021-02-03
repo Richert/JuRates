@@ -5,7 +5,7 @@ function stn_gpe(du, u, p, t)
     # extract state vars and params
 	###############################
     r_e, v_e, r_p, v_p, r_s = u[1:5]
-	r_pe, r_ep, r_pp, r_ee = u[[21, 25, 27, 29]]
+	r_ee, r_pe, r_pp, r_ep = u[[16, 22, 25, 31]]
 	E_e, x_e, I_e, y_e, E_p, x_p, I_p, y_p = u[6:13]
     τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η, Δ, k, η_e, η_p, k_pe, k_ep, k_pp = p
 
@@ -24,10 +24,7 @@ function stn_gpe(du, u, p, t)
 	k_pp = k_pp*k
 	k_ps = 20.0*k
 
-	k_ee_d = 1.14  # order = 2
-	k_pe_d = 2.67  # order = 8
-	k_ep_d = 2.0  # order = 4
-	k_p_d = 1.33  # order = 2
+	k_d = 3.0
 	η_s = 0.002
 	τ_s = 1.0
 
@@ -63,34 +60,32 @@ function stn_gpe(du, u, p, t)
     # axonal propagation
     ####################
 
-    # STN to GPe-p
-	du[14] = k_pe_d * (r_e - u[14])
-	du[15] = k_pe_d * (u[14] - u[15])
-	du[16] = k_pe_d * (u[15] - u[16])
-	du[17] = k_pe_d * (u[16] - u[17])
-	du[18] = k_pe_d * (u[17] - u[18])
-	du[19] = k_pe_d * (u[18] - u[19])
-	du[20] = k_pe_d * (u[19] - u[20])
-	du[21] = k_pe_d * (u[20] - u[21])
+    # STN output
+	du[14] = k_d * (r_e - u[14])
+	du[15] = k_d * (u[14] - u[15])
+	du[16] = k_d * (u[15] - u[16])
+	du[17] = k_d * (u[16] - u[17])
+	du[18] = k_d * (u[17] - u[18])
+	du[19] = k_d * (u[18] - u[19])
+	du[20] = k_d * (u[19] - u[20])
+	du[21] = k_d * (u[20] - u[21])
+	du[22] = k_d * (u[21] - u[22])
 
-	# GPe-p to STN
-	du[22] = k_ep_d * (r_p - u[22])
-	du[23] = k_ep_d * (u[22] - u[23])
-	du[24] = k_ep_d * (u[23] - u[24])
-	du[25] = k_ep_d * (u[24] - u[25])
-
-	# Gpe-p to Gpe-p
-	du[26] = k_p_d * (r_p - u[26])
-	du[27] = k_p_d * (u[26] - u[27])
-
-	# STN to STN
-	du[28] = k_ee_d * (r_e - u[28])
-	du[29] = k_ee_d * (u[28] - u[29])
+	# GPe-p output
+	du[23] = k_d * (r_p - u[23])
+	du[24] = k_d * (u[23] - u[24])
+	du[25] = k_d * (u[24] - u[25])
+	du[26] = k_d * (u[25] - u[26])
+	du[27] = k_d * (u[26] - u[27])
+	du[28] = k_d * (u[27] - u[28])
+	du[29] = k_d * (u[28] - u[29])
+	du[30] = k_d * (u[29] - u[30])
+	du[31] = k_d * (u[30] - u[31])
 
 end
 
 # initial condition and parameters
-N = 29
+N = 31
 u0 = zeros(N,)
 tspan = [0., 11000.]
 dts = 0.1
@@ -111,27 +106,27 @@ k = 100.0
 η_p = 3.145
 k_pe = 8.0
 k_ep = 10.0
-k_pp = 5.0
+k_pp = 10.0
 
 # initial parameters
 p = [τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η, Δ, k, η_e, η_p, k_pe, k_ep, k_pp]
 
 # lower bounds
-p_lower = [5.0, # τ_e
-		   10.0, # τ_p
+p_lower = [4.0, # τ_e
+		   8.0, # τ_p
 		   0.4, # τ_ampa_r
 		   3.0, # τ_ampa_d
 		   0.4, # τ_gabaa_r
 		   4.0, # τ_gabaa_d
-		   1.0, # τ_gabaa_stn
-		   1.0, # η
-		   1.0, # Δ
-		   1.0, # k
-		   -5.0, # η_e
-		   -5.0, # η_p
-		   3.0, # k_pe
-		   5.0, # k_ep
-		   1.0, # k_pp
+		   0.2, # τ_gabaa_stn
+		   0.1, # η
+		   0.1, # Δ
+		   0.1, # k
+		   -10.0, # η_e
+		   -10.0, # η_p
+		   0.2, # k_pe
+		   0.5, # k_ep
+		   0.1, # k_pp
 		   ]
 
 # upper bounds
@@ -147,16 +142,17 @@ p_upper = [25.0, # τ_e
 		   1000.0, # k
 		   10.0, # η_e
 		   10.0, # η_p
-		   8.0, # k_pe
-		   15.0, # k_ep
-		   5.0, # k_pp
+		   15.0, # k_pe
+		   20.0, # k_ep
+		   15.0, # k_pp
 		   ]
 
 # loss function parameters
-freq_target = 14.0
-α = 0.04
-β = 0.04
-γ = 0.01
+freq_target = 15.0
+rate_target = [121, 77, 21, 1, 45, 26]
+weights = [0.5, 0.5, 0.5, 0.5, 1.0, 1.0]
+α = 0.1
+β = 0.25
 
 # model definition
 stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
@@ -172,12 +168,12 @@ function stn_gpe_loss(p)
 	n = div(length(s), 8)
 	psd_stn = welch_pgram(s, n, div(n, 2); nfft=nextfastfft(n), fs=1e3/dts, window=nothing)
 	freqs_stn = Array(freq(psd_stn))
-	stn_idx = 2.0 .< freqs_stn .< 200.0
+	stn_idx = 1.0 .< freqs_stn
 
 	s2 = sol[3, cutoff:end]
 	psd_gpe = welch_pgram(s2, n, div(n, 2); nfft=nextfastfft(n), fs=1e3/dts, window=nothing)
 	freqs_gpe = Array(freq(psd_gpe))
-	gpe_idx = 2.0 .< freqs_gpe .< 200.0
+	gpe_idx = 1.0 .< freqs_gpe
 
 	# calculate loss
 	stn_p = psd_stn.power[stn_idx]
@@ -186,10 +182,12 @@ function stn_gpe_loss(p)
 	gpe_f = psd_gpe.freq[gpe_idx]
 	max_stn = argmax(stn_p)
 	max_gpe = argmax(gpe_p)
-	r1 = 1/gpe_p[max_gpe]^2 + 1/stn_p[max_stn]^2
-	r2 = gpe_p[max_gpe] + stn_p[max_stn]
-	r3 = (40-mean(s2))^2 + (30 - mean(s))^2
-	loss = (stn_f[max_stn] - freq_target)^2 + (gpe_f[max_gpe] - freq_target)^2 + α*r1 + β*r2 + γ*r3
+	pmax_stn = maximum(stn_p)
+	pmax_gpe = maximum(gpe_p)
+	r1 = (1 + pmax_gpe^2)/pmax_gpe + (1 + pmax_stn^2)/pmax_stn
+	rates = [maximum(s2), maximum(s), minimum(s2), minimum(s), mean(s2), mean(s)]
+	r2 = sum(w*((r-t)/t)^2 for (r,t,w) in zip(rate_target, freq_target, weights))
+	loss = (stn_f[max_stn] - freq_target)^2 + (gpe_f[max_gpe] - freq_target)^2 + α*r1 + β*r2
 
 	# save new parameterization
 	remake(stn_gpe_prob, p=p)
@@ -214,7 +212,7 @@ end
 # 	freq_idx = 2.0 .< freqs .< 200.0
 #
 # 	# plot firing rate and PSD profile
-# 	p1 = plot(sol[[1, 3],cutoff:5000+cutoff]')
+# 	p1 = plot(sol[[1, 3],cutoff:10000+cutoff]')
 #
 # 	p2 = plot(psd.freq[freq_idx], psd.power[freq_idx])
 # 	display(plot(p1, p2, layout=(2,1)))
@@ -226,7 +224,7 @@ end
 method = :dxnes
 
 # start optimization: add callback via CallbackFunction=cb, CallbackInterval=1.0
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=1000, workers=workers(), TargetFitness=0.0, PopulationSize=50000)
 
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
