@@ -12,17 +12,17 @@ function stn_gpe(du, u, p, t)
 	# set/adjust parameters
 	#######################
 
-	η_e = η_e*η
-	η_p = η_p*η
+	η_e = η_e*η*100.0
+	η_p = η_p*η*100.0
 
-	Δ_e = 0.3*Δ
-	Δ_p = 0.9*Δ
+	Δ_e = 0.3*Δ*100.0
+	Δ_p = 0.9*Δ*100.0
 
-	k_ee = 0.8*k
-	k_pe = k_pe*k
-	k_ep = k_ep*k
-	k_pp = k_pp*k
-	k_ps = 20.0*k
+	k_ee = 0.8*k*100.0
+	k_pe = k_pe*k*100.0
+	k_ep = k_ep*k*100.0
+	k_pp = k_pp*k*100.0
+	k_ps = 20.0*k*100.0
 
 	k_d = 3.0
 	η_s = 0.002
@@ -87,7 +87,7 @@ end
 # initial condition and parameters
 N = 31
 u0 = zeros(N,)
-tspan = [0., 11000.]
+tspan = [0., 6000.]
 dts = 0.1
 cutoff = Int32(1000/dts)
 
@@ -99,9 +99,9 @@ cutoff = Int32(1000/dts)
 τ_gabaa_r = 0.5
 τ_gabaa_d = 5.0
 τ_gabaa_stn = 2.0
-η = 100.0
-Δ = 100.0
-k = 100.0
+η = 1.0
+Δ = 1.0
+k = 1.0
 η_e = 4.0
 η_p = 3.145
 k_pe = 8.0
@@ -112,47 +112,47 @@ k_pp = 10.0
 p = [τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η, Δ, k, η_e, η_p, k_pe, k_ep, k_pp]
 
 # lower bounds
-p_lower = [4.0, # τ_e
-		   8.0, # τ_p
-		   0.4, # τ_ampa_r
-		   3.0, # τ_ampa_d
+p_lower = [5.0, # τ_e
+		   10.0, # τ_p
+		   0.5, # τ_ampa_r
+		   3.5, # τ_ampa_d
 		   0.4, # τ_gabaa_r
 		   4.0, # τ_gabaa_d
-		   0.2, # τ_gabaa_stn
-		   0.1, # η
-		   0.1, # Δ
-		   0.1, # k
+		   1.0, # τ_gabaa_stn
+		   0.2, # η
+		   0.2, # Δ
+		   0.2, # k
 		   -10.0, # η_e
 		   -10.0, # η_p
-		   0.2, # k_pe
-		   0.5, # k_ep
-		   0.1, # k_pp
+		   0.5, # k_pe
+		   1.0, # k_ep
+		   0.5, # k_pp
 		   ]
 
 # upper bounds
-p_upper = [25.0, # τ_e
-		   50.0, # τ_p
+p_upper = [20.0, # τ_e
+		   40.0, # τ_p
 		   2.0, # τ_ampa_r
 		   10.0, # τ_ampa_d
-		   2.0, # τ_gabaa_r
+		   3.0, # τ_gabaa_r
 		   20.0, # τ_gabaa_d
 		   3.0, # τ_gabaa_stn
-		   1000.0, # η
-		   1000.0, # Δ
-		   1000.0, # k
+		   6.0, # η
+		   6.0, # Δ
+		   6.0, # k
 		   10.0, # η_e
 		   10.0, # η_p
-		   15.0, # k_pe
-		   20.0, # k_ep
-		   15.0, # k_pp
+		   5.0, # k_pe
+		   10.0, # k_ep
+		   5.0, # k_pp
 		   ]
 
 # loss function parameters
 freq_target = 15.0
-rate_target = [121, 77, 21, 1, 45, 26]
-weights = [0.5, 0.5, 0.5, 0.5, 1.0, 1.0]
-α = 0.1
-β = 0.25
+rate_target = [120, 80, 40, 30]
+weights = [0.05, 0.05, 0.5, 0.5]
+α = 0.4
+β = 0.6
 
 # model definition
 stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
@@ -184,9 +184,9 @@ function stn_gpe_loss(p)
 	max_gpe = argmax(gpe_p)
 	pmax_stn = maximum(stn_p)
 	pmax_gpe = maximum(gpe_p)
-	r1 = (1 + pmax_gpe^2)/pmax_gpe + (1 + pmax_stn^2)/pmax_stn
-	rates = [maximum(s2), maximum(s), minimum(s2), minimum(s), mean(s2), mean(s)]
-	r2 = sum(w*((r-t)/t)^2 for (r,t,w) in zip(rate_target, freq_target, weights))
+	r1 = (1 + pmax_gpe)/pmax_gpe + (1 + pmax_stn)/pmax_stn
+	rates = [maximum(s2), maximum(s), mean(s2), mean(s)]
+	r2 = sum(w*((r-t)/t)^2 for (r,t,w) in zip(rates, rate_target, weights))
 	loss = (stn_f[max_stn] - freq_target)^2 + (gpe_f[max_gpe] - freq_target)^2 + α*r1 + β*r2
 
 	# save new parameterization
@@ -224,7 +224,7 @@ end
 method = :dxnes
 
 # start optimization: add callback via CallbackFunction=cb, CallbackInterval=1.0
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=1000, workers=workers(), TargetFitness=0.0, PopulationSize=50000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
 
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
