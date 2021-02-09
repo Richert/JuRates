@@ -148,7 +148,7 @@ p_upper = [20.0, # τ_e
 		   ]
 
 # loss function parameters
-freq_target = 15.0
+freq_target = 12.0
 rate_target = [120, 80, 40, 30]
 weights = [0.05, 0.05, 0.5, 0.5]
 α = 0.4

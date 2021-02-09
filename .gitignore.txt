@@ -1,0 +1,6 @@
+# ignore all jdl files
+.jdl
+
+# ignore all results files
+/BasalGanglia/results
+
