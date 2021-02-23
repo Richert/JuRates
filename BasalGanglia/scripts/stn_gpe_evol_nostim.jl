@@ -112,13 +112,13 @@ k_pp = 10.0
 p = [τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η, Δ, k, η_e, η_p, k_pe, k_ep, k_pp]
 
 # lower bounds
-p_lower = [5.0, # τ_e
-		   10.0, # τ_p
-		   0.5, # τ_ampa_r
-		   3.5, # τ_ampa_d
-		   0.4, # τ_gabaa_r
-		   4.0, # τ_gabaa_d
-		   1.0, # τ_gabaa_stn
+p_lower = [12.0, # τ_e
+		   24.0, # τ_p
+		   0.7, # τ_ampa_r
+		   3.6, # τ_ampa_d
+		   0.6, # τ_gabaa_r
+		   4.9, # τ_gabaa_d
+		   1.5, # τ_gabaa_stn
 		   0.2, # η
 		   0.2, # Δ
 		   0.2, # k
@@ -130,13 +130,13 @@ p_lower = [5.0, # τ_e
 		   ]
 
 # upper bounds
-p_upper = [20.0, # τ_e
-		   40.0, # τ_p
-		   2.0, # τ_ampa_r
-		   10.0, # τ_ampa_d
-		   3.0, # τ_gabaa_r
-		   20.0, # τ_gabaa_d
-		   3.0, # τ_gabaa_stn
+p_upper = [14.0, # τ_e
+		   26.0, # τ_p
+		   0.9, # τ_ampa_r
+		   5.0, # τ_ampa_d
+		   1.0, # τ_gabaa_r
+		   8.0, # τ_gabaa_d
+		   2.1, # τ_gabaa_stn
 		   6.0, # η
 		   6.0, # Δ
 		   6.0, # k
@@ -148,7 +148,7 @@ p_upper = [20.0, # τ_e
 		   ]
 
 # loss function parameters
-freq_target = 18.0
+freq_target = 15.0
 rate_target = [120, 80, 40, 30]
 weights = [0.05, 0.05, 0.5, 0.5]
 α = 0.4
