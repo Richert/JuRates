@@ -1,6 +1,6 @@
 # ignore all jdl files
-.jdl
+*.jdl
+*.h5
 
 # ignore all results files
-/BasalGanglia/results
-
+BasalGanglia/results

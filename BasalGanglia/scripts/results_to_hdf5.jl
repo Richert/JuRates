@@ -1,30 +1,26 @@
 using HDF5, FileIO, JLD2
 
-path = "BasalGanglia/results/stn_gpe_syns//"
-id = "stn_gpe_syns_opt"
+path = "BasalGanglia/results/stn_gpe_no_beta_results//"
+id = "stn_gpe_no_beta"
 
-params = ["eta_e", "eta_p", "eta_a", "k_ee", "k_pe", "k_ae", "k_ep", "k_pp", "k_ap", "k_pa", "k_aa", "k_ps", "k_as", "delta_e", "delta_p", "delta_a"]
+params = ["tau_e", "tau_p", "tau_ampa_r", "tau_ampa_d", "tau_gabaa_r", "tau_gabaa_d", "tau_stn", "eta", "delta", "k", "eta_e", "eta_p", "k_pe", "k_ep", "k_pp"]
 
 # go through all files in directory with identifier
 files = readdir(path)
 for file in files
-    if occursin(id, file) && occursin(".jdl", file)
-        if occursin("params", file)
-            @load path*file p
-            i = split(file, "_")[end-1]
-            fn_new = "$path" * "$id" * "_$i" * "_params.h5"
-            h5open(fn_new, "w") do file
-                g = g_create(file, "p") # create a group
-                for (j, n) in enumerate(params)
-                    g[n] = p[j]
-                end
-                attrs(g)["description"] = "parameter fits" # an attribute
+    if occursin(id, file) && endswith("params.jdl", file)
+        @load path*file p
+        i = split(file, "_")[end-1]
+        @load "$path" * "$id" * "_$i" * "_fitness.h5" f
+        fn_new = "$path" * "$id" * "_$i" * ".h5"
+        h5open(fn_new, "w") do file
+            g = create_group(file, "p")
+            for (j, n) in enumerate(params)
+                g[n] = p[j]
             end
-        else
-            @load path*file f
-            i = split(file, "_")[end-1]
-            fn_new = "$path" * "$id" * "_$i" * "_fitness.h5"
-            h5write(fn_new, "f", f)
+            fit = create_group(file, "f")
+            fit["f"] = f
+            close(file)
         end
     end
 end
