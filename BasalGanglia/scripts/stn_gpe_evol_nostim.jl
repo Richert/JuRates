@@ -4,9 +4,9 @@ function stn_gpe(du, u, p, t)
 
     # extract state vars and params
 	###############################
-    r_e, v_e, r_p, v_p, r_s = u[1:5]
-	r_ee, r_pe, r_pp, r_ep = u[[16, 22, 25, 31]]
-	E_e, x_e, I_e, y_e, E_p, x_p, I_p, y_p = u[6:13]
+    r_e, v_e, r_p, v_p = u[1:4]
+	I_e, y_e, E_p, x_p, I_p, y_p = u[5:10]
+	r_pe, r_pp, r_ep = u[[19, 22, 28]]
     τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η, Δ, k, η_e, η_p, k_pe, k_ep, k_pp = p
 
 	# set/adjust parameters
@@ -18,74 +18,65 @@ function stn_gpe(du, u, p, t)
 	Δ_e = 0.3*Δ*100.0
 	Δ_p = 0.9*Δ*100.0
 
-	k_ee = 0.8*k*100.0
 	k_pe = k_pe*k*100.0
 	k_ep = k_ep*k*100.0
-	k_pp = k_pp*k*100.0
-	k_ps = 20.0*k*100.0
+	k_pp = k_pp*k_ep
 
 	k_d = 3.0
-	η_s = 0.002
-	τ_s = 1.0
 
     # populations
     #############
 
     # STN
     du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
-    du[2] = (v_e^2 + η_e + (E_e - I_e)*τ_e - (τ_e*π*r_e)^2) / τ_e
+    du[2] = (v_e^2 + η_e - I_e*τ_e - (τ_e*π*r_e)^2) / τ_e
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
     du[4] = (v_p^2 + η_p + (E_p - I_p)*τ_p - (τ_p*π*r_p)^2) / τ_p
 
-	# dummy STR
-	du[5] = (η_s - r_s) / τ_s
-
 	# synapse dynamics
     ##################
 
 	# at STN
-	du[6] = x_e
-	du[7] = (k_ee*r_ee - x_e*(τ_ampa_r+τ_ampa_d) - E_e)/(τ_ampa_r*τ_ampa_d)
-	du[8] = y_e
-	du[9] = (k_ep*r_ep - τ_gabaa_stn*y_e*(τ_gabaa_r+τ_gabaa_d) - I_e)/(τ_gabaa_r*τ_gabaa_d*τ_gabaa_stn^2)
+	du[5] = y_e
+	du[6] = (k_ep*r_ep - τ_gabaa_stn*y_e*(τ_gabaa_r+τ_gabaa_d) - I_e)/(τ_gabaa_r*τ_gabaa_d*τ_gabaa_stn^2)
 
 	# at GPe-p
-	du[10] = x_p
-	du[11] = (k_pe*r_pe - x_p*(τ_ampa_r+τ_ampa_d) - E_p)/(τ_ampa_r*τ_ampa_d)
-	du[12] = y_p
-	du[13] = (k_pp*r_pp + k_ps*r_s - y_p*(τ_gabaa_r+τ_gabaa_d) - I_p)/(τ_gabaa_r*τ_gabaa_d)
+	du[7] = x_p
+	du[8] = (k_pe*r_pe - x_p*(τ_ampa_r+τ_ampa_d) - E_p)/(τ_ampa_r*τ_ampa_d)
+	du[9] = y_p
+	du[10] = (k_pp*r_pp - y_p*(τ_gabaa_r+τ_gabaa_d) - I_p)/(τ_gabaa_r*τ_gabaa_d)
 
     # axonal propagation
     ####################
 
     # STN output
-	du[14] = k_d * (r_e - u[14])
+	du[11] = k_d * (r_e - u[11])
+	du[12] = k_d * (u[11] - u[12])
+	du[13] = k_d * (u[12] - u[13])
+	du[14] = k_d * (u[13] - u[14])
 	du[15] = k_d * (u[14] - u[15])
 	du[16] = k_d * (u[15] - u[16])
 	du[17] = k_d * (u[16] - u[17])
 	du[18] = k_d * (u[17] - u[18])
 	du[19] = k_d * (u[18] - u[19])
-	du[20] = k_d * (u[19] - u[20])
-	du[21] = k_d * (u[20] - u[21])
-	du[22] = k_d * (u[21] - u[22])
 
 	# GPe-p output
-	du[23] = k_d * (r_p - u[23])
+	du[20] = k_d * (r_p - u[20])
+	du[21] = k_d * (u[20] - u[21])
+	du[22] = k_d * (u[21] - u[22])
+	du[23] = k_d * (u[22] - u[23])
 	du[24] = k_d * (u[23] - u[24])
 	du[25] = k_d * (u[24] - u[25])
 	du[26] = k_d * (u[25] - u[26])
 	du[27] = k_d * (u[26] - u[27])
 	du[28] = k_d * (u[27] - u[28])
-	du[29] = k_d * (u[28] - u[29])
-	du[30] = k_d * (u[29] - u[30])
-	du[31] = k_d * (u[30] - u[31])
 
 end
 
 # initial condition and parameters
-N = 31
+N = 28
 u0 = zeros(N,)
 tspan = [0., 6000.]
 dts = 0.1
@@ -106,45 +97,45 @@ k = 1.0
 η_p = 3.145
 k_pe = 8.0
 k_ep = 10.0
-k_pp = 10.0
+k_pp = 0.5
 
 # initial parameters
 p = [τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η, Δ, k, η_e, η_p, k_pe, k_ep, k_pp]
 
 # lower bounds
-p_lower = [12.0, # τ_e
-		   24.0, # τ_p
-		   0.7, # τ_ampa_r
+p_lower = [12.9, # τ_e
+		   24.9, # τ_p
+		   0.6, # τ_ampa_r
 		   3.6, # τ_ampa_d
-		   0.6, # τ_gabaa_r
+		   0.4, # τ_gabaa_r
 		   4.9, # τ_gabaa_d
-		   1.5, # τ_gabaa_stn
-		   0.2, # η
-		   0.2, # Δ
-		   0.2, # k
+		   1.9, # τ_gabaa_stn
+		   0.1, # η
+		   0.1, # Δ
+		   0.1, # k
 		   -10.0, # η_e
 		   -10.0, # η_p
-		   0.5, # k_pe
-		   1.0, # k_ep
-		   0.5, # k_pp
+		   0.1, # k_pe
+		   0.1, # k_ep
+		   0.1, # k_pp
 		   ]
 
 # upper bounds
-p_upper = [14.0, # τ_e
-		   26.0, # τ_p
+p_upper = [13.1, # τ_e
+		   25.1, # τ_p
 		   0.9, # τ_ampa_r
-		   5.0, # τ_ampa_d
-		   1.0, # τ_gabaa_r
-		   8.0, # τ_gabaa_d
+		   3.9, # τ_ampa_d
+		   0.6, # τ_gabaa_r
+		   5.1, # τ_gabaa_d
 		   2.1, # τ_gabaa_stn
-		   6.0, # η
-		   6.0, # Δ
-		   6.0, # k
+		   10.0, # η
+		   10.0, # Δ
+		   10.0, # k
 		   10.0, # η_e
 		   10.0, # η_p
-		   5.0, # k_pe
+		   10.0, # k_pe
 		   10.0, # k_ep
-		   5.0, # k_pp
+		   1.0, # k_pp
 		   ]
 
 # loss function parameters
