@@ -85,15 +85,15 @@ tspan = [0., 3000.]
 dts = 0.1
 cutoff = Int32(1000/dts)
 
-# initial parameter values: beta
+# initial parameter values: no beta
 rng = MersenneTwister(1234)
-τ_e = 13.0 + randn(rng, Float32)
-τ_p = 25.0 + randn(rng, Float32)
-τ_ampa_r = 0.8 + randn(rng, Float32)*0.02
-τ_ampa_d = 3.7 + randn(rng, Float32)*0.1
-τ_gabaa_r = 0.5 + randn(rng, Float32)*0.02
-τ_gabaa_d = 5.0 + randn(rng, Float32)*0.1
-τ_gabaa_stn = 2.0 + randn(rng, Float32)*0.04
+τ_e = 13.0
+τ_p = 25.0
+τ_ampa_r = 0.8
+τ_ampa_d = 3.7
+τ_gabaa_r = 0.5
+τ_gabaa_d = 5.0
+τ_gabaa_stn = 2.0
 η_e = 4.0 + randn(rng, Float32)
 η_p = 3.145 + randn(rng, Float32)
 Δ_e = 0.3 + randn(rng, Float32)*0.02
@@ -102,34 +102,17 @@ k_pe = 8.0 + randn(rng, Float32)
 k_ep = 10.0 + randn(rng, Float32)
 k_pp = 0.5 + randn(rng, Float32)*0.1
 
-# initial parameter values: no beta
-# rng = MersenneTwister(1234)
-# τ_e = 13.0
-# τ_p = 25.0
-# τ_ampa_r = 0.8
-# τ_ampa_d = 3.7
-# τ_gabaa_r = 0.5
-# τ_gabaa_d = 5.0
-# τ_gabaa_stn = 2.0
-# η_e = 4.0 + randn(rng, Float32)
-# η_p = 3.145 + randn(rng, Float32)
-# Δ_e = 0.3 + randn(rng, Float32)*0.02
-# Δ_p = 3.0 + randn(rng, Float32)*0.1
-# k_pe = 8.0 + randn(rng, Float32)
-# k_ep = 10.0 + randn(rng, Float32)
-# k_pp = 0.5 + randn(rng, Float32)*0.1
-
 # initial parameters
 p = [τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η_e, η_p, Δ_e, Δ_p, k_pe, k_ep, k_pp]
 
-# lower bounds: beta
-p_lower = [5.0, # τ_e
-		   10.0, # τ_p
-		   0.2, # τ_ampa_r
-		   2.0, # τ_ampa_d
-		   0.2, # τ_gabaa_r
-		   2.0, # τ_gabaa_d
-		   0.5, # τ_gabaa_stn
+# lower bounds: no beta
+p_lower = [12.9, # τ_e
+		   24.9, # τ_p
+		   0.7, # τ_ampa_r
+		   3.6, # τ_ampa_d
+		   0.4, # τ_gabaa_r
+		   4.9, # τ_gabaa_d
+		   1.9, # τ_gabaa_stn
 		   -10.0, # η_e
 		   -10.0, # η_p
 		   0.1, # Δ_e
@@ -139,31 +122,14 @@ p_lower = [5.0, # τ_e
 		   0.1, # k_pp
 		   ]
 
-# lower bounds: no beta
-# p_lower = [12.9, # τ_e
-# 		   24.9, # τ_p
-# 		   0.7, # τ_ampa_r
-# 		   3.6, # τ_ampa_d
-# 		   0.4, # τ_gabaa_r
-# 		   4.9, # τ_gabaa_d
-# 		   1.9, # τ_gabaa_stn
-# 		   -10.0, # η_e
-# 		   -10.0, # η_p
-# 		   0.1, # Δ_e
-# 		   2.0, # Δ_p
-# 		   0.1, # k_pe
-# 		   0.1, # k_ep
-# 		   0.1, # k_pp
-# 		   ]
-
-# upper bounds: beta
-p_upper = [21.0, # τ_e
-		   41.0, # τ_p
-		   2.0, # τ_ampa_r
-		   10.0, # τ_ampa_d
-		   2.0, # τ_gabaa_r
-		   20.0, # τ_gabaa_d
-		   3.0, # τ_gabaa_stn
+# upper bounds: no beta
+p_upper = [13.1, # τ_e
+		   25.1, # τ_p
+		   0.9, # τ_ampa_r
+		   3.8, # τ_ampa_d
+		   0.6, # τ_gabaa_r
+		   5.1, # τ_gabaa_d
+		   2.1, # τ_gabaa_stn
 		   10.0, # η_e
 		   10.0, # η_p
 		   10.0, # Δ_e
@@ -172,23 +138,6 @@ p_upper = [21.0, # τ_e
 		   10.0, # k_ep
 		   1.5, # k_pp
 		   ]
-
-# upper bounds: no beta
-# p_upper = [13.1, # τ_e
-# 		   25.1, # τ_p
-# 		   0.9, # τ_ampa_r
-# 		   3.8, # τ_ampa_d
-# 		   0.6, # τ_gabaa_r
-# 		   5.1, # τ_gabaa_d
-# 		   2.1, # τ_gabaa_stn
-# 		   10.0, # η_e
-# 		   10.0, # η_p
-# 		   10.0, # Δ_e
-# 		   4.0, # Δ_p
-# 		   10.0, # k_pe
-# 		   10.0, # k_ep
-# 		   1.5, # k_pp
-# 		   ]
 
 # loss function parameters
 freq_target = 15.0
