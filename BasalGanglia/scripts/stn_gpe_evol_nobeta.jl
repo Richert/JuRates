@@ -81,7 +81,7 @@ end
 # initial condition and parameters
 N = 30
 u0 = zeros(N,)
-tspan = [0., 3000.]
+tspan = [0., 6000.]
 dts = 0.1
 cutoff = Int32(1000/dts)
 
