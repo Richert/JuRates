@@ -3,7 +3,7 @@ using HDF5, FileIO, JLD2
 path = "BasalGanglia/results/stn_gpe_beta_results/"
 id = "stn_gpe_beta"
 
-params = ["tau_e", "tau_p", "tau_ampa_r", "tau_ampa_d", "tau_gabaa_r", "tau_gabaa_d", "tau_stn", "eta", "delta", "k", "eta_e", "eta_p", "k_pe", "k_ep", "k_pp"]
+params = ["tau_e", "tau_p", "tau_ampa_r", "tau_ampa_d", "tau_gabaa_r", "tau_gabaa_d", "tau_stn", "eta_e", "eta_p", "delta_e", "delta_p", "k_pe", "k_ep", "k_pp"]
 
 # go through all files in directory with identifier
 files = readdir(path)

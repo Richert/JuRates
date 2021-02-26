@@ -142,9 +142,9 @@ p_upper = [13.1, # τ_e
 # loss function parameters
 freq_target = 15.0
 rate_target = [120, 80, 40, 30]
-weights = [0.05, 0.05, 0.5, 0.5]
-α = 0.4
-β = 0.6
+weights = [0.5, 0.5, 0.5, 0.5]
+α = 0.5
+β = 2.0
 
 # model definition
 stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
