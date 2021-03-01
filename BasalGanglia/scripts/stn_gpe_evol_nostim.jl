@@ -1,4 +1,4 @@
-using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, BlackBoxOptim, DSP
+using Distributions, Random, Statistics, FileIO, JLD2, Distributed, DifferentialEquations, BlackBoxOptim, DSP, Plots
 
 function stn_gpe(du, u, p, t)
 
@@ -30,7 +30,7 @@ function stn_gpe(du, u, p, t)
 
     # STN
     du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
-    du[2] = (v_e^2 + η_e - I_e*τ_e - (τ_e*π*r_e)^2) / τ_e
+    du[2] = (v_e^2 + η_e + (E_e - I_e)*τ_e - (τ_e*π*r_e)^2) / τ_e
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
@@ -193,9 +193,9 @@ p_upper = [21.0, # τ_e
 # loss function parameters
 freq_target = 15.0
 rate_target = [120, 80, 40, 30]
-weights = [0.05, 0.05, 0.5, 0.5]
-α = 0.4
-β = 0.6
+weights = [0.5, 0.5, 0.5, 0.5]
+α = 0.1
+β = 2.0
 
 # model definition
 stn_gpe_prob = ODEProblem(stn_gpe, u0, tspan, p)
@@ -240,34 +240,34 @@ function stn_gpe_loss(p)
 end
 
 # callback function
-# fitness_progress_history = Array{Tuple{Int, Float64},1}()
-# cb = function (oc) #callback function to observe training
-#
-# 	# simulate behavior of best candidate
-# 	p = best_candidate(oc)
-#     sol = Array(solve(remake(stn_gpe_prob, p=p), Tsit5(), saveat=dts, reltol=1e-8, abstol=1e-8)) .* 1e3
-#
-# 	# calculate PSD
-# 	s = sol[3, cutoff:end]
-# 	n = div(length(s), 8)
-# 	psd = welch_pgram(s, n, div(n, 2); nfft=nextfastfft(n), fs=1e3/dts, window=nothing)
-# 	freqs = Array(freq(psd))
-# 	freq_idx = 2.0 .< freqs .< 200.0
-#
-# 	# plot firing rate and PSD profile
-# 	p1 = plot(sol[[1, 3],cutoff:10000+cutoff]')
-#
-# 	p2 = plot(psd.freq[freq_idx], psd.power[freq_idx])
-# 	display(plot(p1, p2, layout=(2,1)))
-#
-#   return push!(fitness_progress_history, (BlackBoxOptim.num_func_evals(oc), best_fitness(oc)))
-# end
+fitness_progress_history = Array{Tuple{Int, Float64},1}()
+cb = function (oc) #callback function to observe training
+
+	# simulate behavior of best candidate
+	p = best_candidate(oc)
+    sol = Array(solve(remake(stn_gpe_prob, p=p), Tsit5(), saveat=dts, reltol=1e-8, abstol=1e-8)) .* 1e3
+
+	# calculate PSD
+	s = sol[3, cutoff:end]
+	n = div(length(s), 8)
+	psd = welch_pgram(s, n, div(n, 2); nfft=nextfastfft(n), fs=1e3/dts, window=nothing)
+	freqs = Array(freq(psd))
+	freq_idx = 2.0 .< freqs .< 200.0
+
+	# plot firing rate and PSD profile
+	p1 = plot(sol[[1, 3],cutoff:10000+cutoff]')
+
+	p2 = plot(psd.freq[freq_idx], psd.power[freq_idx])
+	display(plot(p1, p2, layout=(2,1)))
+
+  return push!(fitness_progress_history, (BlackBoxOptim.num_func_evals(oc), best_fitness(oc)))
+end
 
 # choose optimization algorithm
 method = :dxnes
 
 # start optimization: add callback via CallbackFunction=cb, CallbackInterval=1.0
-opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=10000)
+opt = bbsetup(stn_gpe_loss; Method=method, Parameters=p, SearchRange=(collect(zip(p_lower,p_upper))), NumDimensions=length(p), MaxSteps=500, workers=workers(), TargetFitness=0.0, PopulationSize=10000, CallbackFunction=cb, CallbackInterval=1.0)
 
 el = @elapsed res = bboptimize(opt)
 t = round(el, digits=3)
@@ -279,7 +279,7 @@ display(p)
 τ_e, τ_p, τ_ampa_r, τ_ampa_d, τ_gabaa_r, τ_gabaa_d, τ_gabaa_stn, η_e, η_p, Δ_e, Δ_p, k_pe, k_ep, k_pp = p
 
 sol = Array(solve(remake(stn_gpe_prob, p=p), Tsit5(), saveat=dts, reltol=1e-8, abstol=1e-8)) .* 1e3
-# display(plot(sol[[1, 3], cutoff:cutoff+5000]'))
+display(plot(sol[[1, 3], cutoff:cutoff+5000]'))
 
 # store best parameter set
 # @save "/home/rgast/JuliaProjects/JuRates/BasalGanglia/results/stn_gpe_3pop_p3.jdl" p

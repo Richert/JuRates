@@ -30,7 +30,7 @@ function stn_gpe(du, u, p, t)
 
     # STN
     du[1] = (Δ_e/(π*τ_e) + 2.0*r_e*v_e) / τ_e
-    du[2] = (v_e^2 + η_e - I_e*τ_e - (τ_e*π*r_e)^2) / τ_e
+    du[2] = (v_e^2 + η_e + (E_e - I_e)*τ_e - (τ_e*π*r_e)^2) / τ_e
 
     # GPe-p
     du[3] = (Δ_p/(π*τ_p) + 2.0*r_p*v_p) / τ_p
@@ -143,7 +143,7 @@ p_upper = [21.0, # τ_e
 freq_target = 15.0
 rate_target = [120, 80, 40, 30]
 weights = [0.5, 0.5, 0.5, 0.5]
-α = 0.5
+α = 0.1
 β = 2.0
 
 # model definition
